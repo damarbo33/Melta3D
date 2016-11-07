@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="learnopengl" />
+		<Option pch_mode="2" />
+		<Option compiler="mingw32" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/learnopengl" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="mingw32" />
+				<Compiler>
+					<Add option="-pg" />
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add option="-pg -lgmon" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/learnopengl" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="mingw32" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-w" />
+			<Add option="-fexceptions" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glm" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glm/glm" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glfw-3.2.1/bin/glfw-3.2.1.bin.WIN32/include" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glfw-3.2.1/bin/glfw-3.2.1.bin.WIN32/include/GLFW" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glfw-3.2.1/deps" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glew-2.0.0/include" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/soil/src" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/assimp-3.3.1/include" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/bullet3-2.85.1/src" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/ogldev-source/Include" />
+			<Add directory="." />
+			<Add directory="common" />
+			<Add directory="src" />
+		</Compiler>
+		<Linker>
+			<Add option="-lSOIL" />
+			<Add option="-lglfw3" />
+			<Add option="-lglew32s" />
+			<Add option="-lassimp.dll" />
+			<Add option="-lBulletCollision.dll" />
+			<Add option="-lBulletDynamics.dll" />
+			<Add option="-lLinearMath.dll" />
+			<Add option="-lopengl32" />
+			<Add option="-lglu32" />
+			<Add option="-lgdi32" />
+			<Add option="-luser32" />
+			<Add option="-lkernel32" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glfw-3.2.1/bin/glfw-3.2.1.bin.WIN64/lib-mingw-w64" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glew-2.0.0/lib/Release/x64" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/soil/lib" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/assimp-3.3.1/build/code" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/assimp-3.3.1/build/contrib/zlib" />
+			<Add directory="../../../Program Files (x86)/Codeblocks/CodeBlocks16/bullet3-2.85.1/build/lib" />
+		</Linker>
+		<Unit filename="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glfw-3.2.1/deps/glad.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../../Program Files (x86)/Codeblocks/CodeBlocks16/glm/glm/glm.hpp" />
+		<Unit filename="../../../Program Files (x86)/Codeblocks/CodeBlocks16/ogldev-source/Common/math_3d.cpp" />
+		<Unit filename="../../../Program Files (x86)/Codeblocks/CodeBlocks16/ogldev-source/Common/ogldev_util.cpp" />
+		<Unit filename="src/Animation.h" />
+		<Unit filename="src/Camera.h" />
+		<Unit filename="src/Example1ColourTriangle.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Example2ColourTriangle.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1BasicLight.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1ColourTriangle.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1Coordinates.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1LightCaster.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1Lightning.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1LightningMaps.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1Materials.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1ModelLoad.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1MultipleLights.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1Textures.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise1Transformations.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise2ColourTriangle.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise2Coordinates.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise2Textures.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Exercise3Coordinates.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/Mesh.h" />
+		<Unit filename="src/Model.h" />
+		<Unit filename="src/animation/AnimationAstroboy.cpp" />
+		<Unit filename="src/common/texture.cpp" />
+		<Unit filename="src/physics/PhysicCube.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="src/physics/Physics.cpp" />
+		<Unit filename="src/physics/Physics.h" />
+		<Unit filename="src/physics/SimpleBox.cpp">
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/physics/SimpleBox.h">
+			<Option target="Release" />
+		</Unit>
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
