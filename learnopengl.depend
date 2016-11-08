@@ -652,7 +652,7 @@
 	<glm/gtc/type_ptr.hpp>
 	<SOIL.h>
 
-1478526818 c:\github\proyectos\learnopengl\src\model.h
+1478601506 c:\github\proyectos\learnopengl\src\model.h
 	<string>
 	<fstream>
 	<sstream>
@@ -1493,7 +1493,7 @@
 	<glm/gtc/type_ptr.hpp>
 	<SOIL.h>
 
-1478527913 source:c:\github\proyectos\learnopengl\src\animation\animationastroboy.cpp
+1478601056 source:c:\github\proyectos\learnopengl\src\animation\animationastroboy.cpp
 	<string>
 	<GL/glew.h>
 	<GLFW/glfw3.h>

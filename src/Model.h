@@ -30,23 +30,26 @@ GLint TextureFromFile(const char* path, string directory);
 class Model
 {
 public:
-    /*  Functions   */
-    // Constructor, expects a filepath to a 3D model.
-    Model(GLchar* path, Shader *shader)
-    {
-        mp_scene = NULL;
+
+    /**
+    *Constructor, expects a filepath to a 3D model.
+    */
+    Model(GLchar* path, Shader *shader, int fpsModel = 30){
+        this->mp_scene = NULL;
+        this->fpsModel = fpsModel;
         this->loadModel(path, shader);
         this->preprocessBones(shader);
+
     }
 
-    // Draws the model, and thus all its meshes
-    void Draw(Shader *shader, GLfloat currentFrame){
-
+    /**
+    *Draws the model, and thus all its meshes
+    */
+    void Draw(Shader *shader, GLfloat currentFrame, int nAnim = 0){
         glUniform1i(m_animLoc, this->getNumAnimations());
-
         if (this->hasAnimations()){
             vector<Matrix4f> Transforms;
-            this->BoneTransform(currentFrame, Transforms);
+            this->BoneTransform(currentFrame, Transforms, nAnim);
             for (int i = 0 ; i < Transforms.size() ; i++) {
                 SetBoneTransform(i, Transforms[i]);
             }
@@ -56,10 +59,16 @@ public:
             this->meshes[i]->Draw(shader);
     }
 
+    /**
+    *
+    */
     bool hasAnimations(){
         return (mp_scene != NULL && mp_scene->mNumAnimations > 0);
     }
 
+    /**
+    *
+    */
     int getNumAnimations(){
         if (mp_scene != NULL){
             return mp_scene->mNumAnimations;
@@ -71,27 +80,68 @@ public:
     /**
     *
     */
-    void BoneTransform(float TimeInSeconds, vector<Matrix4f>& Transforms)
+    int getTotalFramesModel(){
+        return totalFramesModel;
+    }
+
+    /**
+    *
+    */
+    void setTotalFramesModel(int var){
+        totalFramesModel = var;
+    }
+
+    /**
+    *
+    */
+    int getFpsModel(){
+        return fpsModel;
+    }
+
+    /**
+    *
+    */
+    void setFpsModel(int var){
+        fpsModel = var;
+    }
+
+    /**
+    *
+    */
+    void BoneTransform(float TimeInSeconds, vector<Matrix4f>& Transforms, int nAnimation)
     {
         //glm::mat4 Identity = glm::mat4();
         Matrix4f Identity;
         Identity.InitIdentity();
         Transforms.resize(m_NumBones);
 
-        if (mp_scene != NULL && mp_scene->mNumAnimations > 0){
-            float TicksPerSecond = mp_scene->mAnimations[0]->mTicksPerSecond != 0.0f ?
-                    mp_scene->mAnimations[0]->mTicksPerSecond : 25.0f;
+        if (mp_scene != NULL && mp_scene->mNumAnimations > nAnimation){
+            float TicksPerSecond = mp_scene->mAnimations[nAnimation]->mTicksPerSecond != 0.0f ?
+                    mp_scene->mAnimations[nAnimation]->mTicksPerSecond : 25.0f;
 
             float TimeInTicks = TimeInSeconds * TicksPerSecond;
-            float AnimationTime = fmod(TimeInTicks, mp_scene->mAnimations[0]->mDuration);
+            float AnimationTime = fmod(TimeInTicks, mp_scene->mAnimations[nAnimation]->mDuration);
 
-            ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
-            //cout << "m_NumBones: " << m_NumBones << endl;
-        }
+            //cout << "AnimationTime: " << AnimationTime << endl;
+            //If we want process all the animation data on the fly, uncoment this line
+//            ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
 
-        for (uint32_t i = 0 ; i < m_NumBones ; i++) {
-            Transforms[i] = m_BoneInfo[i].FinalTransformation;
-            //Transforms[i] = Identity;
+            //It seems the model does not have fps data specificated. We must inform the fps
+            //to reproduce the animation properly
+//            const float inc = mp_scene->mAnimations[nAnimation]->mDuration /
+//                              TicksPerSecond /
+//                              (float)getTotalFramesModel();
+
+            const float inc = 1.0f/(float)getFpsModel();
+
+            for (uint32_t i = 0 ; i < m_NumBones ; i++) {
+                //If we want process all the animation data on the fly, uncoment this line
+//                Transforms[i] = m_BoneInfo[i].FinalTransformation;
+                //Line to don't make any change
+                //Transforms[i] = Identity;
+                //Line to use precalculated matrices for the bones transformation
+                Transforms[i] = m_transformBonesFinal[nAnimation][AnimationTime/inc][i];
+            }
         }
     }
 
@@ -106,11 +156,16 @@ private:
     vector<BoneInfo> m_BoneInfo;
     GLuint m_boneLocation[MAX_BONES];
     GLuint m_animLoc;
+    int totalFramesModel;
+    int fpsModel;
 
     //glm::mat4 m_GlobalInverseTransform;
     Matrix4f m_GlobalInverseTransform;
     const aiScene* mp_scene;
     Assimp::Importer importer;
+
+    //vector with bones matrix transform, per time and per num of animation
+    vector<vector<vector<Matrix4f> > > m_transformBonesFinal;
 
 
     /**
@@ -119,10 +174,54 @@ private:
     void SetBoneTransform(int Index, const Matrix4f& Transform){
         //cout << "Index: " << Index << endl;
         assert(Index < MAX_BONES);
-
         //Transform.Print();
         //glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, glm::value_ptr(Transform));
         glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, (const GLfloat*)Transform);
+    }
+
+    /**
+    *
+    */
+    void calcTransformationMatrices(){
+        float TimeInSeconds = 0.0f;
+        Matrix4f Identity;
+        Identity.InitIdentity();
+
+        if (mp_scene != NULL && mp_scene->mNumAnimations > 0){
+            cout << "NumAnimations: " << mp_scene->mNumAnimations << endl;
+            for (int nAnim = 0; nAnim < mp_scene->mNumAnimations; nAnim++){
+                vector<vector<Matrix4f> > animationVector;
+                float TicksPerSecond = mp_scene->mAnimations[nAnim]->mTicksPerSecond > 0.0f ?
+                        mp_scene->mAnimations[nAnim]->mTicksPerSecond : 25.0f;
+
+                cout << "TicksPerSecond: " << TicksPerSecond << endl;
+                cout << "Duration of the animation in ticks: " << mp_scene->mAnimations[nAnim]->mDuration << endl;
+                cout << "Ticks per second: " <<  mp_scene->mAnimations[nAnim]->mTicksPerSecond << endl;
+                cout << "duration in s: " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond << " s" << endl;
+
+                const float endFrameTime = mp_scene->mAnimations[nAnim]->mDuration;
+                //const float inc = endFrameTime / TicksPerSecond / (float)getTotalFramesModel();
+                const float inc = 1.0f/(float)getFpsModel();
+
+                cout << "Inc: " << inc << endl;
+                int nFrames = 0;
+
+                for (float AnimationTime=0; AnimationTime < endFrameTime; AnimationTime+=inc){
+                    ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
+                    vector<Matrix4f> finalBoneTransform;
+                    for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
+                        finalBoneTransform.push_back(m_BoneInfo[BoneIndex].FinalTransformation);
+                    }
+                    animationVector.push_back(finalBoneTransform);
+                    nFrames++;
+                }
+                cout << "Added: " << nFrames << " frames for " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond
+                << " seconds for animation " << nAnim << endl;
+                m_transformBonesFinal.push_back(animationVector);
+            }
+        } else {
+            cout << "NumAnimations: 0" << endl;
+        }
     }
 
     /**
@@ -135,8 +234,8 @@ private:
             sprintf(Name, "gBones[%d]", i);
             m_boneLocation[i] = glGetUniformLocation(shader->Program,Name);
         }
-
         m_animLoc = glGetUniformLocation(shader->Program, "nAnim");
+        calcTransformationMatrices();
     }
 
     /**
@@ -392,34 +491,6 @@ private:
         m_GlobalInverseTransform = pScene->mRootNode->mTransformation;
         m_GlobalInverseTransform.Inverse();
         return GLCheckError();
-    }
-
-    /**
-    *
-    */
-    void processAnimNode(aiAnimation* pAnim, const aiScene* scene){
-        cout << "There are " << scene->mNumAnimations << " animations" << endl;
-        // Process each animations located at the current node
-        for(GLuint i = 0; i < scene->mNumAnimations; i++){
-            // The node object only contains indices to index the actual objects in the scene.
-            // The scene contains all the data, node is just to keep stuff organized (like relations between nodes).
-            aiAnimation* anim = scene->mAnimations[i];
-            this->animations.push_back(this->processAnim(anim, scene));
-        }
-    }
-
-    /**
-    *
-    */
-    Animation processAnim(aiAnimation* anim, const aiScene* scene){
-        cout << "NameAnim: " << anim->mName.C_Str() <<
-            " mNumChannels: " << anim->mNumChannels << endl;
-
-        for (int i=0; i < anim->mNumChannels; i++){
-            aiNodeAnim* nodeAnim = anim->mChannels[i];
-            cout << "NodeAnim: " << nodeAnim->mNodeName.C_Str() << endl;
-        }
-        return Animation();
     }
 
 

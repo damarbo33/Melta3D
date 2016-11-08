@@ -132,6 +132,7 @@
 		<Unit filename="src/Model.h" />
 		<Unit filename="src/animation/AnimationAstroboy.cpp" />
 		<Unit filename="src/common/texture.cpp" />
+		<Unit filename="src/lights/light.h" />
 		<Unit filename="src/physics/PhysicCube.cpp">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>

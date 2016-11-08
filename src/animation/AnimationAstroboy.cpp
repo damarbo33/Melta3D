@@ -156,7 +156,7 @@ int main()
     //Model ourModel("models/Moon_3D_Model/moon.obj");
     //Model ourModel("models/OldHouse2/Old House 2 3D Models.obj");
 //    Model ourModel("models/AstroBoy_Walk/astroBoy_walk_Max.dae", &shader);
-    Model ourModel("models/guard/boblampclean.md5mesh",&shader);
+//    Model ourModel("models/guard/boblampclean.md5mesh",&shader, 15);
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
     //Model ourModel("models/GirlGame/Girl game N240416.obj");
@@ -164,6 +164,7 @@ int main()
     Model ourWorld("models/cs_assault/cs_assault.obj", &shader);
     //Model ourModel("models/Small Tropical Island/Small Tropical Island.obj", &shader);
     //Model ourModel("models/lux/luxury house interior.obj", &shader);
+    Model ourModel("models/ArmyPilot/ArmyPilot.dae", &shader, 30);
 
 
     // Draw in wireframe
@@ -226,14 +227,15 @@ int main()
         glm::mat4 transInversMatrix;
 
         /** para la escena del hombre de la lampara*/
-        for (int j=0; j < 50; j++){
+        for (int j=0; j < 10; j++){
             model = glm::mat4();
-            model = glm::translate(model, glm::vec3(j*2 % 10, -1.75f, j*2 / 10)); // Translate it down a bit so it's at the center of the scene
+            model = glm::translate(model, glm::vec3(j*2 % 20, -1.75f, j*2 / 20)); // Translate it down a bit so it's at the center of the scene
             //model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));	// Para astroboy
-            model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el de la lampara
+//            model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el de la lampara
             //model = glm::scale(model, glm::vec3(0.15f, 0.15f, 0.15f));	// Para nanosuit
             //model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// Para la bikinigirl
 //            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Para la bikinigirl
+            //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// Para el piloto
             glUniformMatrix4fv(personLoc, 1, GL_FALSE, glm::value_ptr(model));
             //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
             transInversMatrix = transpose(inverse(model));
@@ -368,7 +370,7 @@ void initLights(vector<Light *> &luces, Shader &shader){
     luz->locAmbient = glGetUniformLocation(shader.Program, "dirLight.ambient");
     luz->locDiffuse = glGetUniformLocation(shader.Program, "dirLight.diffuse");
     luz->locSpecular = glGetUniformLocation(shader.Program, "dirLight.specular");
-    luz->vAmbient = glm::vec3(0.2f, 0.2f, 0.2f);
+    luz->vAmbient = glm::vec3(0.9f, 0.9f, 0.9f);
     luz->vDiffuse = glm::vec3(0.2f, 0.2f, 0.2f);
     luz->vSpecular = glm::vec3(0.2f, 0.2f, 0.2f);
     luz->vDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
@@ -451,15 +453,15 @@ void processLights(vector<Light *> &luces, Shader &shader){
         if (luz->lightType == AMBIENTLIGHT || luz->lightType == POINTLIGHT
             || luz->lightType == SPOTLIGHT){
             // Directional light
-            glUniform3f(luz->locAmbient,   luz->vAmbient[0],luz->vAmbient[1],luz->vAmbient[2]);
-            glUniform3f(luz->locDirection, luz->vDirection[0],luz->vDirection[1],luz->vDirection[2]);
-            glUniform3f(luz->locDiffuse, luz->vDiffuse[0],luz->vDiffuse[1],luz->vDiffuse[2]);
-            glUniform3f(luz->locSpecular, luz->vSpecular[0],luz->vSpecular[1],luz->vSpecular[2]);
+            glUniform3fv(luz->locAmbient, 1, &luz->vAmbient[0]);
+            glUniform3fv(luz->locDirection, 1, &luz->vDirection[0]);
+            glUniform3fv(luz->locDiffuse, 1, &luz->vDiffuse[0]);
+            glUniform3fv(luz->locSpecular, 1, &luz->vSpecular[0]);
         }
 
         if (luz->lightType == POINTLIGHT || luz->lightType == SPOTLIGHT){
             Pointlight *pointluz = (Pointlight *) luces.at(i);
-            glUniform3f(pointluz->locPosition,pointluz->vPosition[0],pointluz->vPosition[1],pointluz->vPosition[2]);
+            glUniform3fv(pointluz->locPosition, 1, &pointluz->vPosition[0]);
             glUniform1f(pointluz->locConstant,pointluz->vConstant);
             glUniform1f(pointluz->locLinear,pointluz->vLinear);
             glUniform1f(pointluz->locQuadratic,pointluz->vQuadratic);
