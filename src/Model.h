@@ -6,6 +6,13 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <stdio.h>
+#include <sys/stat.h>
+
+#ifdef WIN
+    #include <windows.h>
+#endif // WIN
+
 using namespace std;
 // GL Includes
 #include <GL/glew.h> // Contains all the necessery OpenGL includes
@@ -34,9 +41,10 @@ public:
     /**
     *Constructor, expects a filepath to a 3D model.
     */
-    Model(GLchar* path, Shader *shader, int fpsModel = 30){
+    Model(GLchar* path, Shader *shader, int fpsModel = 30, bool precalculateBonesTransform = false){
         this->mp_scene = NULL;
         this->fpsModel = fpsModel;
+        this->precalculateBonesTransform = precalculateBonesTransform;
         this->loadModel(path, shader);
         this->preprocessBones(shader);
 
@@ -122,25 +130,31 @@ public:
             float TimeInTicks = TimeInSeconds * TicksPerSecond;
             float AnimationTime = fmod(TimeInTicks, mp_scene->mAnimations[nAnimation]->mDuration);
 
-            //cout << "AnimationTime: " << AnimationTime << endl;
-            //If we want process all the animation data on the fly, uncoment this line
-//            ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
+            if (precalculateBonesTransform){
+                const float inc = 1.0f/(float)getFpsModel();
+                for (uint32_t i = 0 ; i < m_NumBones ; i++){
+                    Transforms[i].m[0][0] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->aa;
+                    Transforms[i].m[0][1] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ab;
+                    Transforms[i].m[0][2] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ac;
+                    Transforms[i].m[0][3] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ad;
+                    Transforms[i].m[1][0] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ba;
+                    Transforms[i].m[1][1] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->bb;
+                    Transforms[i].m[1][2] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->bc;
+                    Transforms[i].m[1][3] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->bd;
+                    Transforms[i].m[2][0] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ca;
+                    Transforms[i].m[2][1] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->cb;
+                    Transforms[i].m[2][2] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->cc;
+                    Transforms[i].m[2][3] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->cd;
+                    Transforms[i].m[3][0] =  0;
+                    Transforms[i].m[3][1] =  0;
+                    Transforms[i].m[3][2] =  0;
+                    Transforms[i].m[3][3] =  1;
+                }
 
-            //It seems the model does not have fps data specificated. We must inform the fps
-            //to reproduce the animation properly
-//            const float inc = mp_scene->mAnimations[nAnimation]->mDuration /
-//                              TicksPerSecond /
-//                              (float)getTotalFramesModel();
-
-            const float inc = 1.0f/(float)getFpsModel();
-
-            for (uint32_t i = 0 ; i < m_NumBones ; i++) {
-                //If we want process all the animation data on the fly, uncoment this line
-//                Transforms[i] = m_BoneInfo[i].FinalTransformation;
-                //Line to don't make any change
-                //Transforms[i] = Identity;
-                //Line to use precalculated matrices for the bones transformation
-                Transforms[i] = m_transformBonesFinal[nAnimation][AnimationTime/inc][i];
+            } else {
+                ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
+                for (uint32_t i = 0 ; i < m_NumBones ; i++)
+                    Transforms[i] = m_BoneInfo[i].FinalTransformation;
             }
         }
     }
@@ -163,9 +177,31 @@ private:
     Matrix4f m_GlobalInverseTransform;
     const aiScene* mp_scene;
     Assimp::Importer importer;
+    bool precalculateBonesTransform;
 
+    struct matrix4{
+        float aa,ab,ac,ad,
+              ba,bb,bc,bd,
+              ca,cb,cc,cd;
+              //da,db,dc,dd; //0,0,0,1
+
+        matrix4(Matrix4f &mat){
+            aa = mat.m[0][0]; ab = mat.m[0][1]; ac = mat.m[0][2]; ad = mat.m[0][3];
+            ba = mat.m[1][0]; bb = mat.m[1][1]; bc = mat.m[1][2]; bd = mat.m[1][3];
+            ca = mat.m[2][0]; cb = mat.m[2][1]; cc = mat.m[2][2]; cd = mat.m[2][3];
+//            da = mat.m[3][0]; db = mat.m[3][1]; dc = mat.m[3][2]; dd = mat.m[3][3];
+
+//            cout << mat.m[0][0] << "," << mat.m[0][1] << "," << mat.m[0][2] << "," << mat.m[0][3] << endl;
+//            cout << mat.m[1][0] << "," << mat.m[1][1] << "," << mat.m[1][2] << "," << mat.m[1][3] << endl;
+//            cout << mat.m[2][0] << "," << mat.m[2][1] << "," << mat.m[2][2] << "," << mat.m[2][3] << endl;
+//            cout << mat.m[3][0] << "," << mat.m[3][1] << "," << mat.m[3][2] << "," << mat.m[3][3] << endl;
+//            cout << endl;
+        }
+    };
     //vector with bones matrix transform, per time and per num of animation
     vector<vector<vector<Matrix4f> > > m_transformBonesFinal;
+    vector<vector<vector<matrix4 *> > > mf_transformBonesFinal;
+
 
 
     /**
@@ -179,7 +215,7 @@ private:
         glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, (const GLfloat*)Transform);
     }
 
-    /**
+    /**4
     *
     */
     void calcTransformationMatrices(){
@@ -191,6 +227,7 @@ private:
             cout << "NumAnimations: " << mp_scene->mNumAnimations << endl;
             for (int nAnim = 0; nAnim < mp_scene->mNumAnimations; nAnim++){
                 vector<vector<Matrix4f> > animationVector;
+                vector<vector<matrix4 *> > f_animationVector;
                 float TicksPerSecond = mp_scene->mAnimations[nAnim]->mTicksPerSecond > 0.0f ?
                         mp_scene->mAnimations[nAnim]->mTicksPerSecond : 25.0f;
 
@@ -208,16 +245,24 @@ private:
 
                 for (float AnimationTime=0; AnimationTime < endFrameTime; AnimationTime+=inc){
                     ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
-                    vector<Matrix4f> finalBoneTransform;
+//                    vector<Matrix4f> finalBoneTransform;
+                    vector<matrix4 *> f_finalBoneTransform;
+
                     for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
-                        finalBoneTransform.push_back(m_BoneInfo[BoneIndex].FinalTransformation);
+//                        finalBoneTransform.push_back(m_BoneInfo[BoneIndex].FinalTransformation);
+                        //f_finalBoneTransform.push_back(m_BoneInfo[BoneIndex].FinalTransformation.m);
+                        f_finalBoneTransform.push_back(new matrix4(m_BoneInfo[BoneIndex].FinalTransformation));
                     }
-                    animationVector.push_back(finalBoneTransform);
+
+//                    animationVector.push_back(finalBoneTransform);
+                    f_animationVector.push_back(f_finalBoneTransform);
                     nFrames++;
                 }
                 cout << "Added: " << nFrames << " frames for " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond
                 << " seconds for animation " << nAnim << endl;
+
                 m_transformBonesFinal.push_back(animationVector);
+                mf_transformBonesFinal.push_back(f_animationVector);
             }
         } else {
             cout << "NumAnimations: 0" << endl;
@@ -235,7 +280,10 @@ private:
             m_boneLocation[i] = glGetUniformLocation(shader->Program,Name);
         }
         m_animLoc = glGetUniformLocation(shader->Program, "nAnim");
-        calcTransformationMatrices();
+
+        if (precalculateBonesTransform){
+            calcTransformationMatrices();
+        }
     }
 
     /**
@@ -518,7 +566,7 @@ private:
                 return i;
             }
         }
-        assert(0);
+//        assert(0);
         return 0;
     }
 
@@ -536,8 +584,11 @@ private:
         uint32_t NextScalingIndex = (ScalingIndex + 1);
         assert(NextScalingIndex < pNodeAnim->mNumScalingKeys);
         float DeltaTime = (float)(pNodeAnim->mScalingKeys[NextScalingIndex].mTime - pNodeAnim->mScalingKeys[ScalingIndex].mTime);
-        float Factor = (AnimationTime - (float)pNodeAnim->mScalingKeys[ScalingIndex].mTime) / DeltaTime;
-        assert(Factor >= 0.0f && Factor <= 1.0f);
+
+        float preFactor = AnimationTime - (float)pNodeAnim->mScalingKeys[ScalingIndex].mTime;
+        if (preFactor < 0.0f) preFactor = 0.0f;
+        float Factor = preFactor / DeltaTime;
+//        assert(Factor >= 0.0f && Factor <= 1.0f);
         const aiVector3D& Start = pNodeAnim->mScalingKeys[ScalingIndex].mValue;
         const aiVector3D& End   = pNodeAnim->mScalingKeys[NextScalingIndex].mValue;
         aiVector3D Delta = End - Start;
@@ -557,7 +608,7 @@ private:
             }
         }
 
-        assert(0);
+//        assert(0);
 
         return 0;
     }
@@ -577,8 +628,12 @@ private:
         uint32_t NextRotationIndex = (RotationIndex + 1);
         assert(NextRotationIndex < pNodeAnim->mNumRotationKeys);
         float DeltaTime = (float)(pNodeAnim->mRotationKeys[NextRotationIndex].mTime - pNodeAnim->mRotationKeys[RotationIndex].mTime);
-        float Factor = (AnimationTime - (float)pNodeAnim->mRotationKeys[RotationIndex].mTime) / DeltaTime;
-        assert(Factor >= 0.0f && Factor <= 1.0f);
+
+        float preFactor = AnimationTime - (float)pNodeAnim->mRotationKeys[RotationIndex].mTime;
+        if (preFactor < 0.0f) preFactor = 0.0f;
+
+        float Factor = preFactor / DeltaTime;
+//        assert(Factor >= 0.0f && Factor <= 1.0f);
         const aiQuaternion& StartRotationQ = pNodeAnim->mRotationKeys[RotationIndex].mValue;
         const aiQuaternion& EndRotationQ   = pNodeAnim->mRotationKeys[NextRotationIndex].mValue;
         aiQuaternion::Interpolate(Out, StartRotationQ, EndRotationQ, Factor);
@@ -595,7 +650,7 @@ private:
                 return i;
             }
         }
-        assert(0);
+//        assert(0);
         return 0;
     }
 
@@ -613,8 +668,12 @@ private:
         uint32_t NextPositionIndex = (PositionIndex + 1);
         assert(NextPositionIndex < pNodeAnim->mNumPositionKeys);
         float DeltaTime = (float)(pNodeAnim->mPositionKeys[NextPositionIndex].mTime - pNodeAnim->mPositionKeys[PositionIndex].mTime);
-        float Factor = (AnimationTime - (float)pNodeAnim->mPositionKeys[PositionIndex].mTime) / DeltaTime;
-        assert(Factor >= 0.0f && Factor <= 1.0f);
+
+        float preFactor = AnimationTime - (float)pNodeAnim->mPositionKeys[PositionIndex].mTime;
+        if (preFactor < 0.0f) preFactor = 0.0f;
+
+        float Factor = preFactor / DeltaTime;
+//        assert(Factor >= 0.0f && Factor <= 1.0f);
         const aiVector3D& Start = pNodeAnim->mPositionKeys[PositionIndex].mValue;
         const aiVector3D& End = pNodeAnim->mPositionKeys[NextPositionIndex].mValue;
         aiVector3D Delta = End - Start;
@@ -710,11 +769,69 @@ private:
 
 };
 
+/**
+*
+*/
+bool isDir(string ruta){
+    struct stat info;
+    stat(ruta.c_str(), &info);
+
+    if(S_ISDIR(info.st_mode)){
+        return true;
+    } else{
+        return false;
+    }
+
+}
+
+/**
+* Comprueba si existe el directorio o fichero pasado por parámetro
+*/
+bool existe(string ruta){
+    if(isDir(ruta)){
+        return true;
+    } else {
+        FILE *archivo = fopen(ruta.c_str(), "r");
+        if (archivo != NULL) {
+            fclose(archivo);
+            return true; //TRUE
+        } else {
+            return false; //FALSE
+        }
+    }
+}
+
+/**
+* Obtiene el directorio de un fichero
+*/
+string getFileName(string file){
+    if(isDir(file)){
+        return file;
+    } else {
+        size_t found;
+        found = file.find_last_of("\\");
+        if (found != string::npos){
+            return file.substr(found  + 1, file.length() - found - 1);
+        } else {
+            found = file.find_last_of("/");
+            if (found != string::npos){
+                return file.substr(found  + 1, file.length() - found - 1);
+            } else {
+                return file;
+            }
+        }
+    }
+}
+
 GLint TextureFromFile(const char* path, string directory)
 {
      //Generate texture ID and load texture data
-    string filename = string(path);
-    filename = directory + '/' + filename;
+    string filename = directory + '/' + string(path);
+    if (!existe(filename)){
+        filename = directory + '/' + getFileName(path);
+    }
+
+//    if (fid)
     GLuint textureID;
     glGenTextures(1, &textureID);
     int width,height;

@@ -27,6 +27,7 @@ void main()
 	if (nAnim == 0){
 		PosL    = vec4(position, 1.0);
 		NormalL = vec4(mat3(transInversMatrix) * normal, 0.0);
+		//NormalL   =  vec4(mat3(transpose(inverse(model))) * normal, 0.0);
 	} else {
 		BoneTransform = gBones[BoneIDs[0]] * Weights[0];
 		BoneTransform     += gBones[BoneIDs[1]] * Weights[1];
@@ -34,7 +35,8 @@ void main()
 		BoneTransform     += gBones[BoneIDs[3]] * Weights[3];
 		
 		PosL  	   =  BoneTransform * vec4(position, 1.0) ;
-		NormalL   =  vec4(mat3(transInversMatrix) * normal, 0.0) * BoneTransform;		
+		NormalL   =  vec4(mat3(transInversMatrix) * normal, 0.0) * BoneTransform;	
+		//NormalL   =  vec4(mat3(transpose(inverse(model))) * normal, 0.0) * BoneTransform;
 	}
 	
     gl_Position    = projection * view * model * PosL;

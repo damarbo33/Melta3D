@@ -652,13 +652,16 @@
 	<glm/gtc/type_ptr.hpp>
 	<SOIL.h>
 
-1478601506 c:\github\proyectos\learnopengl\src\model.h
+1478631810 c:\github\proyectos\learnopengl\src\model.h
 	<string>
 	<fstream>
 	<sstream>
 	<iostream>
 	<map>
 	<vector>
+	<stdio.h>
+	<sys/stat.h>
+	<windows.h>
 	<GL/glew.h>
 	<glm/glm.hpp>
 	<glm/gtc/matrix_transform.hpp>
@@ -1493,7 +1496,7 @@
 	<glm/gtc/type_ptr.hpp>
 	<SOIL.h>
 
-1478601056 source:c:\github\proyectos\learnopengl\src\animation\animationastroboy.cpp
+1478631815 source:c:\github\proyectos\learnopengl\src\animation\animationastroboy.cpp
 	<string>
 	<GL/glew.h>
 	<GLFW/glfw3.h>
@@ -1558,4 +1561,69 @@
 	"types.h"
 
 1478512069 c:\github\proyectos\learnopengl\src\lights\light.h
+
+1462532581 c:\github\externallibs\uiobjects\src\dirutil.h
+	"fileprops.h"
+	<dirent.h>
+	<sys/stat.h>
+	<sys/types.h>
+	<unistd.h>
+	"Traza.h"
+	"ListaSimple.h"
+	<stdio.h>
+	<windows.h>
+
+1401205024 c:\github\externallibs\uiobjects\src\fileprops.h
+	<string>
+
+1398694044 c:\github\externallibs\uiobjects\src\traza.h
+	<stdio.h>
+	<time.h>
+	<string>
+	<limits.h>
+	<iostream>
+	<fstream>
+	"Constant.h"
+
+1475656408 c:\github\externallibs\uiobjects\src\constant.h
+	<fstream>
+	<sstream>
+	<string.h>
+	<vector>
+	<typeinfo>
+	<ctime>
+	<dirent.h>
+	<stdio.h>
+	<limits.h>
+	<algorithm>
+	<cctype>
+	<iomanip>
+	<cstddef>
+	<stdint.h>
+	<windows.h>
+
+1461131489 c:\github\externallibs\uiobjects\src\listasimple.h
+	<string.h>
+	<stdio.h>
+	"Excepcion.h"
+	"Fileio.h"
+	<typeinfo>
+	"Constant.h"
+	"fileprops.h"
+
+1445243484 c:\github\externallibs\uiobjects\src\excepcion.h
+	<iostream>
+	<cmath>
+	"Traza.h"
+	"Constant.h"
+
+1433743123 c:\github\externallibs\uiobjects\src\fileio.h
+	<iostream>
+	<fstream>
+	<string>
+	<algorithm>
+	<vector>
+	<iterator>
+	"Excepcion.h"
+	"Traza.h"
 

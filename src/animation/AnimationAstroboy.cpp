@@ -142,7 +142,7 @@ int main()
     // Load models
     //Model ourModel("models/JillValentine/pl1010.obj");
     //Model ourModel("models/JillLow/JillOBJ.obj");
-    //Model ourModel("models/Nanosuit/nanosuit.obj", &shader);
+//    Model ourModel("models/Nanosuit/nanosuit.obj", &shader);
     //Model ourModel("models/Juliet_Striped_Bikini/Juliet_Striped_Bikini.dae");
     //Model ourModel("models/houseplant4/house plant.obj");
     //Model ourModel("models/MM/MM.obj");
@@ -155,7 +155,7 @@ int main()
     //Model ourModel("models/earth/earth.obj");
     //Model ourModel("models/Moon_3D_Model/moon.obj");
     //Model ourModel("models/OldHouse2/Old House 2 3D Models.obj");
-//    Model ourModel("models/AstroBoy_Walk/astroBoy_walk_Max.dae", &shader);
+    //
 //    Model ourModel("models/guard/boblampclean.md5mesh",&shader, 15);
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
@@ -164,8 +164,10 @@ int main()
     Model ourWorld("models/cs_assault/cs_assault.obj", &shader);
     //Model ourModel("models/Small Tropical Island/Small Tropical Island.obj", &shader);
     //Model ourModel("models/lux/luxury house interior.obj", &shader);
-    Model ourModel("models/ArmyPilot/ArmyPilot.dae", &shader, 30);
-
+    Model ourModel("models/ArmyPilot/ArmyPilot.ms3d", &shader, 30, false);
+    //Model ourModel("models/xna/dude.dae", &shader, 60);
+    //Model ourModel("models/Police2/Police.obj", &shader, 60);
+//    Model ourModel("models/ninja/ninja.ms3d", &shader, 60);
 
     // Draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -176,7 +178,7 @@ int main()
     glCullFace(GL_FRONT);
     glFrontFace(GL_CW);
 
-    double lastTime = glfwGetTime();
+    double lastTime = 0;
     int nbFrames = 0;
 
     vector<Light *> luces;
@@ -184,10 +186,11 @@ int main()
 
     GLint personLoc = glGetUniformLocation(shader.Program, "model");
 
+    GLfloat initTime = glfwGetTime();
     // Game loop
     while(!glfwWindowShouldClose(window)){
         // Set frame time
-        GLfloat currentFrame = glfwGetTime();
+        GLfloat currentFrame = glfwGetTime() - initTime;
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
@@ -226,16 +229,21 @@ int main()
         glm::mat4 model;
         glm::mat4 transInversMatrix;
 
-        /** para la escena del hombre de la lampara*/
-        for (int j=0; j < 10; j++){
+        /** para la escena del modelo*/
+        for (int j=0; j < 70; j++){
             model = glm::mat4();
             model = glm::translate(model, glm::vec3(j*2 % 20, -1.75f, j*2 / 20)); // Translate it down a bit so it's at the center of the scene
-            //model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));	// Para astroboy
+//            model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));	// Para astroboy
 //            model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el de la lampara
-            //model = glm::scale(model, glm::vec3(0.15f, 0.15f, 0.15f));	// Para nanosuit
+//            model = glm::scale(model, glm::vec3(0.15f, 0.15f, 0.15f));	// Para nanosuit
             //model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// Para la bikinigirl
 //            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Para la bikinigirl
-            //model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// Para el piloto
+            model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.005f));	// Para el piloto
+//            model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));	// Para el xna model
+//            model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Para el xna model
+            //model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el poli de half life 2
+//            model = glm::scale(model, glm::vec3(0.20f, 0.20f, 0.20f));	// Para el ninja
+
             glUniformMatrix4fv(personLoc, 1, GL_FALSE, glm::value_ptr(model));
             //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
             transInversMatrix = transpose(inverse(model));
@@ -243,10 +251,10 @@ int main()
             //Drawing the model
             ourModel.Draw(&shader, currentFrame);
         }
-        /**Fin modelo lampara*/
+        /**Fin modelo*/
 
 
-        /**Para la escena de cs_assault*/
+        /**Para el escenario*/
         model = glm::mat4();
         model = glm::translate(model, glm::vec3(0.0f, -100.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));	// It's a bit too big for our scene, so scale it down
@@ -257,7 +265,7 @@ int main()
         glUniformMatrix4fv(transInversLoc, 1, GL_FALSE, glm::value_ptr(transInversMatrix));
         //Drawing the model
         ourWorld.Draw(&shader, currentFrame);
-        /** Fin cs_assault*/
+        /** Fin escenario*/
 
         // Also draw the lamp object, again binding the appropriate shader
         lampShader.Use();
@@ -370,9 +378,9 @@ void initLights(vector<Light *> &luces, Shader &shader){
     luz->locAmbient = glGetUniformLocation(shader.Program, "dirLight.ambient");
     luz->locDiffuse = glGetUniformLocation(shader.Program, "dirLight.diffuse");
     luz->locSpecular = glGetUniformLocation(shader.Program, "dirLight.specular");
-    luz->vAmbient = glm::vec3(0.9f, 0.9f, 0.9f);
-    luz->vDiffuse = glm::vec3(0.2f, 0.2f, 0.2f);
-    luz->vSpecular = glm::vec3(0.2f, 0.2f, 0.2f);
+    luz->vAmbient = glm::vec3(0.6f, 0.6f, 0.6f);
+    luz->vDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
+    luz->vSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
     luz->vDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
     luces.push_back(luz);
 
@@ -386,7 +394,7 @@ void initLights(vector<Light *> &luces, Shader &shader){
     luz2->locQuadratic = glGetUniformLocation(shader.Program, "pointLights[0].quadratic");
 
     luz2->vPosition = glm::vec3(pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
-    luz2->vAmbient = glm::vec3(pointLightColors[0].x * 0.1,  pointLightColors[0].y * 0.1,  pointLightColors[0].z * 0.1);
+    luz2->vAmbient = glm::vec3(pointLightColors[0].x * 0.3f,  pointLightColors[0].y * 0.3f,  pointLightColors[0].z * 0.3f);
     luz2->vDiffuse = glm::vec3(pointLightColors[0].x,  pointLightColors[0].y,  pointLightColors[0].z);
     luz2->vSpecular = glm::vec3(pointLightColors[0].x,  pointLightColors[0].y,  pointLightColors[0].z);
     luz2->vConstant = 1.0f;
@@ -404,7 +412,7 @@ void initLights(vector<Light *> &luces, Shader &shader){
     luz3->locQuadratic = glGetUniformLocation(shader.Program, "pointLights[1].quadratic");
 
     luz3->vPosition = glm::vec3(pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
-    luz3->vAmbient = glm::vec3(pointLightColors[1].x * 0.1,  pointLightColors[1].y * 0.1,  pointLightColors[1].z * 0.1);
+    luz3->vAmbient = glm::vec3(pointLightColors[1].x * 0.3f,  pointLightColors[1].y * 0.3f,  pointLightColors[1].z * 0.3f);
     luz3->vDiffuse = glm::vec3(pointLightColors[1].x,  pointLightColors[1].y,  pointLightColors[1].z);
     luz3->vSpecular = glm::vec3(pointLightColors[1].x,  pointLightColors[1].y,  pointLightColors[1].z);
     luz3->vConstant = 1.0f;
@@ -426,9 +434,9 @@ void initLights(vector<Light *> &luces, Shader &shader){
 
     luz4->vPosition = glm::vec3(camera.Position.x, camera.Position.y, camera.Position.z);
     luz4->vDirection = glm::vec3(camera.Front.x, camera.Front.y, camera.Front.z);
-    luz4->vAmbient = glm::vec3(1.0f, 1.0f, 1.0f);
-    luz4->vDiffuse = glm::vec3(1.0f, 1.0f, 1.0f);
-    luz4->vSpecular = glm::vec3(1.0f, 1.0f, 1.0f);
+    luz4->vAmbient = glm::vec3(0.0f, 0.0f, 0.0f);
+    luz4->vDiffuse = glm::vec3(0.0f, 0.0f, 0.0f);
+    luz4->vSpecular = glm::vec3(0.0f, 0.0f, 0.0f);
     luz4->vConstant = 1.0f;
     luz4->vLinear = 0.009f;
     luz4->vQuadratic = 0.0032f;
