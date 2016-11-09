@@ -195,8 +195,7 @@ public:
         glBindVertexArray(0);
 
         // Always good practice to set everything back to defaults once configured.
-        for (GLuint i = 0; i < this->textures.size(); i++)
-        {
+        for (GLuint i = 0; i < this->textures.size(); i++){
             glActiveTexture(GL_TEXTURE0 + i);
             glBindTexture(GL_TEXTURE_2D, 0);
         }
@@ -252,17 +251,18 @@ private:
         glEnableVertexAttribArray(TEX_COORD_LOCATION);
         glVertexAttribPointer(TEX_COORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, TexCoords));
 //        cout << "Bones.size() " << Bones.size() << endl;
-        //Bones
-        glBindBuffer(GL_ARRAY_BUFFER, BBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(Bones[0]) * Bones.size(), &Bones[0], GL_STATIC_DRAW);
+        if (Bones.size() > 0){
+            glBindBuffer(GL_ARRAY_BUFFER, BBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(Bones[0]) * Bones.size(), &Bones[0], GL_STATIC_DRAW);
 
-        glEnableVertexAttribArray(BONE_ID_LOCATION);
-        glVertexAttribIPointer(BONE_ID_LOCATION, 4, GL_INT, sizeof(VertexBoneData), (GLvoid*)offsetof(VertexBoneData, IDs));
+            glEnableVertexAttribArray(BONE_ID_LOCATION);
+            glVertexAttribIPointer(BONE_ID_LOCATION, 4, GL_INT, sizeof(VertexBoneData), (GLvoid*)offsetof(VertexBoneData, IDs));
 
-        glEnableVertexAttribArray(BONE_WEIGHT_LOCATION);
-        glVertexAttribPointer(BONE_WEIGHT_LOCATION, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), (GLvoid*)offsetof(VertexBoneData, Weights));
+            glEnableVertexAttribArray(BONE_WEIGHT_LOCATION);
+            glVertexAttribPointer(BONE_WEIGHT_LOCATION, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), (GLvoid*)offsetof(VertexBoneData, Weights));
 
-        glBindVertexArray(0);
+            glBindVertexArray(0);
+        }
     }
 
     /**

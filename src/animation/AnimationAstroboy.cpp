@@ -44,8 +44,8 @@ GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
 // The MAIN function, from here we start our application and run our Game loop
-int main()
-{
+int main(int argc, char *argv[]){
+
     // Init GLFW
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
@@ -54,6 +54,12 @@ int main()
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", NULL, NULL); // Windowed
+    if( window == NULL ){
+        fprintf( stderr, "Failed to open GLFW window. OpenGL2.1 needed\n" );
+        glfwTerminate();
+        return -1;
+    }
+
     glfwMakeContextCurrent(window);
 
     // Set the required callback functions
@@ -156,7 +162,7 @@ int main()
     //Model ourModel("models/Moon_3D_Model/moon.obj");
     //Model ourModel("models/OldHouse2/Old House 2 3D Models.obj");
     //
-//    Model ourModel("models/guard/boblampclean.md5mesh",&shader, 15);
+    Model ourModel("models/guard/boblampclean.md5mesh",&shader, 30, true);
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
     //Model ourModel("models/GirlGame/Girl game N240416.obj");
@@ -164,7 +170,7 @@ int main()
     Model ourWorld("models/cs_assault/cs_assault.obj", &shader);
     //Model ourModel("models/Small Tropical Island/Small Tropical Island.obj", &shader);
     //Model ourModel("models/lux/luxury house interior.obj", &shader);
-    Model ourModel("models/ArmyPilot/ArmyPilot.ms3d", &shader, 30, false);
+//    Model ourModel("models/ArmyPilot/ArmyPilot.ms3d", &shader, 30, true);
     //Model ourModel("models/xna/dude.dae", &shader, 60);
     //Model ourModel("models/Police2/Police.obj", &shader, 60);
 //    Model ourModel("models/ninja/ninja.ms3d", &shader, 60);
@@ -234,11 +240,11 @@ int main()
             model = glm::mat4();
             model = glm::translate(model, glm::vec3(j*2 % 20, -1.75f, j*2 / 20)); // Translate it down a bit so it's at the center of the scene
 //            model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));	// Para astroboy
-//            model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el de la lampara
+            model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el de la lampara
 //            model = glm::scale(model, glm::vec3(0.15f, 0.15f, 0.15f));	// Para nanosuit
             //model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// Para la bikinigirl
 //            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Para la bikinigirl
-            model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.005f));	// Para el piloto
+//            model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.005f));	// Para el piloto
 //            model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));	// Para el xna model
 //            model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Para el xna model
             //model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el poli de half life 2

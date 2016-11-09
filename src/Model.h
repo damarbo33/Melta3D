@@ -51,15 +51,36 @@ public:
     }
 
     /**
+    *
+    */
+    float getAnimationTime(GLfloat currentFrame, int nAnim){
+        if (getFpsModel() > 0.0){
+            float TicksPerSecond = mp_scene->mAnimations[nAnim]->mTicksPerSecond != 0.0f ?
+            mp_scene->mAnimations[nAnim]->mTicksPerSecond : 25.0f;
+            float TimeInTicks = currentFrame * TicksPerSecond;
+            return fmod(TimeInTicks, mp_scene->mAnimations[nAnim]->mDuration);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
     *Draws the model, and thus all its meshes
     */
     void Draw(Shader *shader, GLfloat currentFrame, int nAnim = 0){
         glUniform1i(m_animLoc, this->getNumAnimations());
+
         if (this->hasAnimations()){
-            vector<Matrix4f> Transforms;
-            this->BoneTransform(currentFrame, Transforms, nAnim);
-            for (int i = 0 ; i < Transforms.size() ; i++) {
-                SetBoneTransform(i, Transforms[i]);
+            if (this->precalculateBonesTransform){
+                int posAnimation = getAnimationTime(currentFrame, nAnim)  * (float)getFpsModel();
+                for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
+                    SetBoneTransform(BoneIndex, mf_transformBonesFinal[nAnim][posAnimation][BoneIndex]);
+                }
+            } else {
+                this->BoneTransform(currentFrame, nAnim);
+                for (int i = 0 ; i < m_BoneInfo.size() ; i++) {
+                    SetBoneTransform(i, m_BoneInfo[i].FinalTransformation);
+                }
             }
         }
 
@@ -116,45 +137,13 @@ public:
     /**
     *
     */
-    void BoneTransform(float TimeInSeconds, vector<Matrix4f>& Transforms, int nAnimation)
-    {
+    void BoneTransform(float TimeInSeconds, int nAnimation){
         //glm::mat4 Identity = glm::mat4();
         Matrix4f Identity;
         Identity.InitIdentity();
-        Transforms.resize(m_NumBones);
-
         if (mp_scene != NULL && mp_scene->mNumAnimations > nAnimation){
-            float TicksPerSecond = mp_scene->mAnimations[nAnimation]->mTicksPerSecond != 0.0f ?
-                    mp_scene->mAnimations[nAnimation]->mTicksPerSecond : 25.0f;
-
-            float TimeInTicks = TimeInSeconds * TicksPerSecond;
-            float AnimationTime = fmod(TimeInTicks, mp_scene->mAnimations[nAnimation]->mDuration);
-
-            if (precalculateBonesTransform){
-                const float inc = 1.0f/(float)getFpsModel();
-                for (uint32_t i = 0 ; i < m_NumBones ; i++){
-                    Transforms[i].m[0][0] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->aa;
-                    Transforms[i].m[0][1] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ab;
-                    Transforms[i].m[0][2] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ac;
-                    Transforms[i].m[0][3] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ad;
-                    Transforms[i].m[1][0] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ba;
-                    Transforms[i].m[1][1] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->bb;
-                    Transforms[i].m[1][2] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->bc;
-                    Transforms[i].m[1][3] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->bd;
-                    Transforms[i].m[2][0] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->ca;
-                    Transforms[i].m[2][1] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->cb;
-                    Transforms[i].m[2][2] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->cc;
-                    Transforms[i].m[2][3] =  mf_transformBonesFinal[nAnimation][AnimationTime/inc][i]->cd;
-                    Transforms[i].m[3][0] =  0;
-                    Transforms[i].m[3][1] =  0;
-                    Transforms[i].m[3][2] =  0;
-                    Transforms[i].m[3][3] =  1;
-                }
-
-            } else {
-                ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
-                for (uint32_t i = 0 ; i < m_NumBones ; i++)
-                    Transforms[i] = m_BoneInfo[i].FinalTransformation;
+            if (!precalculateBonesTransform){
+                ReadNodeHeirarchy(getAnimationTime(TimeInSeconds, nAnimation), mp_scene->mRootNode, Identity);
             }
         }
     }
@@ -184,13 +173,11 @@ private:
               ba,bb,bc,bd,
               ca,cb,cc,cd;
               //da,db,dc,dd; //0,0,0,1
-
         matrix4(Matrix4f &mat){
             aa = mat.m[0][0]; ab = mat.m[0][1]; ac = mat.m[0][2]; ad = mat.m[0][3];
             ba = mat.m[1][0]; bb = mat.m[1][1]; bc = mat.m[1][2]; bd = mat.m[1][3];
             ca = mat.m[2][0]; cb = mat.m[2][1]; cc = mat.m[2][2]; cd = mat.m[2][3];
 //            da = mat.m[3][0]; db = mat.m[3][1]; dc = mat.m[3][2]; dd = mat.m[3][3];
-
 //            cout << mat.m[0][0] << "," << mat.m[0][1] << "," << mat.m[0][2] << "," << mat.m[0][3] << endl;
 //            cout << mat.m[1][0] << "," << mat.m[1][1] << "," << mat.m[1][2] << "," << mat.m[1][3] << endl;
 //            cout << mat.m[2][0] << "," << mat.m[2][1] << "," << mat.m[2][2] << "," << mat.m[2][3] << endl;
@@ -199,7 +186,7 @@ private:
         }
     };
     //vector with bones matrix transform, per time and per num of animation
-    vector<vector<vector<Matrix4f> > > m_transformBonesFinal;
+    //mf_transformBonesFinal[nAnim][posAnimation][BoneIndex]
     vector<vector<vector<matrix4 *> > > mf_transformBonesFinal;
 
 
@@ -215,8 +202,32 @@ private:
         glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, (const GLfloat*)Transform);
     }
 
-    /**4
+    /**
     *
+    */
+    void SetBoneTransform(int Index, const matrix4 *Transform){
+        Matrix4f tmpTransform;
+        tmpTransform.m[0][0] =  Transform->aa;
+        tmpTransform.m[0][1] =  Transform->ab;
+        tmpTransform.m[0][2] =  Transform->ac;
+        tmpTransform.m[0][3] =  Transform->ad;
+        tmpTransform.m[1][0] =  Transform->ba;
+        tmpTransform.m[1][1] =  Transform->bb;
+        tmpTransform.m[1][2] =  Transform->bc;
+        tmpTransform.m[1][3] =  Transform->bd;
+        tmpTransform.m[2][0] =  Transform->ca;
+        tmpTransform.m[2][1] =  Transform->cb;
+        tmpTransform.m[2][2] =  Transform->cc;
+        tmpTransform.m[2][3] =  Transform->cd;
+        tmpTransform.m[3][0] =  0;
+        tmpTransform.m[3][1] =  0;
+        tmpTransform.m[3][2] =  0;
+        tmpTransform.m[3][3] =  1;
+        SetBoneTransform(Index, tmpTransform);
+    }
+
+    /**
+    * Process to calculate all the transformation matrices for the object
     */
     void calcTransformationMatrices(){
         float TimeInSeconds = 0.0f;
@@ -226,9 +237,10 @@ private:
         if (mp_scene != NULL && mp_scene->mNumAnimations > 0){
             cout << "NumAnimations: " << mp_scene->mNumAnimations << endl;
             for (int nAnim = 0; nAnim < mp_scene->mNumAnimations; nAnim++){
-                vector<vector<Matrix4f> > animationVector;
+
                 vector<vector<matrix4 *> > f_animationVector;
-                float TicksPerSecond = mp_scene->mAnimations[nAnim]->mTicksPerSecond > 0.0f ?
+
+                const float TicksPerSecond = mp_scene->mAnimations[nAnim]->mTicksPerSecond > 0.0f ?
                         mp_scene->mAnimations[nAnim]->mTicksPerSecond : 25.0f;
 
                 cout << "TicksPerSecond: " << TicksPerSecond << endl;
@@ -245,23 +257,16 @@ private:
 
                 for (float AnimationTime=0; AnimationTime < endFrameTime; AnimationTime+=inc){
                     ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
-//                    vector<Matrix4f> finalBoneTransform;
                     vector<matrix4 *> f_finalBoneTransform;
 
                     for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
-//                        finalBoneTransform.push_back(m_BoneInfo[BoneIndex].FinalTransformation);
-                        //f_finalBoneTransform.push_back(m_BoneInfo[BoneIndex].FinalTransformation.m);
                         f_finalBoneTransform.push_back(new matrix4(m_BoneInfo[BoneIndex].FinalTransformation));
                     }
-
-//                    animationVector.push_back(finalBoneTransform);
                     f_animationVector.push_back(f_finalBoneTransform);
                     nFrames++;
                 }
                 cout << "Added: " << nFrames << " frames for " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond
                 << " seconds for animation " << nAnim << endl;
-
-                m_transformBonesFinal.push_back(animationVector);
                 mf_transformBonesFinal.push_back(f_animationVector);
             }
         } else {
@@ -448,7 +453,6 @@ private:
     *
     */
     void processBones(int idMesh, const aiScene* scene, vector<VertexBoneData> &Bones){
-
         // Count the number of vertices and indices
         GLuint NumVertices = 0;
         NumVertices = scene->mMeshes[idMesh]->mNumVertices;
@@ -836,34 +840,20 @@ GLint TextureFromFile(const char* path, string directory)
     glGenTextures(1, &textureID);
     int width,height;
 
-//    cout << "filename: " << filename << endl;
-//    if (filename.find(".dds") != string::npos){
-//        glBindTexture(GL_TEXTURE_2D, textureID);
-//        textureID = SOIL_load_OGL_texture(filename.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_DDS_LOAD_DIRECT );
-//        glGenerateMipmap(GL_TEXTURE_2D);
-//        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT  );
-//        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT  );
-//        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-//        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//        glBindTexture(GL_TEXTURE_2D, 0);
-//    } else {
-
-        //	loading of the single-image-cubemap failed, try it as a simple texture
-//        std::cout << "Attempting to load as a simple 2D texture" << std::endl;
-        //	load the texture, if specified
-        textureID = SOIL_load_OGL_texture(
-                filename.c_str(),
-                SOIL_LOAD_AUTO,
-                SOIL_CREATE_NEW_ID,
-                SOIL_FLAG_POWER_OF_TWO
-                | SOIL_FLAG_MIPMAPS
-                //| SOIL_FLAG_MULTIPLY_ALPHA
-                //| SOIL_FLAG_COMPRESS_TO_DXT
-                | SOIL_FLAG_DDS_LOAD_DIRECT
-                //| SOIL_FLAG_NTSC_SAFE_RGB
-                //| SOIL_FLAG_CoCg_Y
-                //| SOIL_FLAG_TEXTURE_RECTANGLE
-                );
+    textureID = SOIL_load_OGL_texture(
+            filename.c_str(),
+            SOIL_LOAD_AUTO,
+            SOIL_CREATE_NEW_ID,
+            0
+            | SOIL_FLAG_POWER_OF_TWO
+            | SOIL_FLAG_MIPMAPS
+            //| SOIL_FLAG_MULTIPLY_ALPHA
+            //| SOIL_FLAG_COMPRESS_TO_DXT
+            | SOIL_FLAG_DDS_LOAD_DIRECT
+            //| SOIL_FLAG_NTSC_SAFE_RGB
+            //| SOIL_FLAG_CoCg_Y
+            //| SOIL_FLAG_TEXTURE_RECTANGLE
+            );
 
         if( textureID > 0 ){
 			glGenerateMipmap(GL_TEXTURE_2D);
@@ -875,21 +865,20 @@ GLint TextureFromFile(const char* path, string directory)
             glBindTexture(GL_TEXTURE_2D, 0);
 //			std::cout << "the loaded texture ID was " << textureID << std::endl;
 		} else {
+
 //		    std::cout << "Attempting to load image" << std::endl;
             unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA); //SOIL_LOAD_AUTO
             // Assign texture to ID
-            glBindTexture(GL_TEXTURE_2D, textureID);
+            //glBindTexture(GL_TEXTURE_2D, textureID);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
             glGenerateMipmap(GL_TEXTURE_2D);
-            // Parameters
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glBindTexture(GL_TEXTURE_2D, 0);
+//            glBindTexture(GL_TEXTURE_2D, 0);
             SOIL_free_image_data(image);
 //            std::cout << "Image loaded" << std::endl;
 		}
-//    }
     return textureID;
 }
