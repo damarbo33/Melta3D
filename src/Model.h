@@ -910,18 +910,19 @@ GLint TextureFromFile(const char* path, string directory)
         filename = directory + '/' + getFileName(path);
     }
 
+    //With soil we can create new textures id with the flag "SOIL_CREATE_NEW_ID".
+    //So we don't need to call "glGenTextures(1, &textureID);"
     GLuint textureID;
-//    glGenTextures(1, &textureID);
     int width,height;
 
     textureID = SOIL_load_OGL_texture(
             filename.c_str(),
             SOIL_LOAD_AUTO,
-            SOIL_CREATE_NEW_ID,
+            SOIL_CREATE_NEW_ID, //    glGenTextures(1, &textureID);
             0
             | SOIL_FLAG_POWER_OF_TWO
             | SOIL_FLAG_MIPMAPS
-//            | SOIL_FLAG_COMPRESS_TO_DXT
+            | SOIL_FLAG_COMPRESS_TO_DXT
             | SOIL_FLAG_DDS_LOAD_DIRECT
             //| SOIL_FLAG_MULTIPLY_ALPHA
             //| SOIL_FLAG_NTSC_SAFE_RGB
@@ -938,10 +939,10 @@ GLint TextureFromFile(const char* path, string directory)
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			//unbinds texture
 			glBindTexture(GL_TEXTURE_2D, 0);
-			std::cout << "the loaded texture ID was " << textureID << std::endl;
+//			std::cout << "the loaded texture ID was " << textureID << std::endl;
 		} else {
-		    std::cout << "Attempting to load image" << std::endl;
-            // Assign texture to ID
+//		    std::cout << "Attempting to load image" << std::endl;
+            // Assign texture to ID if we failed from SOIL_load_OGL_texture
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
             unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA); //SOIL_LOAD_AUTO
@@ -954,7 +955,7 @@ GLint TextureFromFile(const char* path, string directory)
             //de allocates resources and unbinds texture
             SOIL_free_image_data(image);
             glBindTexture(GL_TEXTURE_2D, 0);
-            std::cout << "Image loaded" << std::endl;
+//            std::cout << "Image loaded" << std::endl;
 		}
 
     return textureID;
