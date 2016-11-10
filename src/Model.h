@@ -917,12 +917,11 @@ GLint TextureFromFile(const char* path, string directory)
     textureID = SOIL_load_OGL_texture(
             filename.c_str(),
             SOIL_LOAD_AUTO,
-            //SOIL_CREATE_NEW_ID,
-            textureID,
+            SOIL_CREATE_NEW_ID,
             0
             | SOIL_FLAG_POWER_OF_TWO
             | SOIL_FLAG_MIPMAPS
-            | SOIL_FLAG_COMPRESS_TO_DXT
+//            | SOIL_FLAG_COMPRESS_TO_DXT
             | SOIL_FLAG_DDS_LOAD_DIRECT
             //| SOIL_FLAG_MULTIPLY_ALPHA
             //| SOIL_FLAG_NTSC_SAFE_RGB

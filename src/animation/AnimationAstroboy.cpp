@@ -162,7 +162,7 @@ int main(int argc, char *argv[]){
     //Model ourModel("models/Moon_3D_Model/moon.obj");
     //Model ourModel("models/OldHouse2/Old House 2 3D Models.obj");
     //
-//    Model ourModel("models/guard/boblampclean.md5mesh",&shader, 30, true);
+//    Model *ourModel = new Model("models/guard/boblampclean.md5mesh",&shader, 30, true);
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
     //Model ourModel("models/GirlGame/Girl game N240416.obj");
@@ -193,6 +193,7 @@ int main(int argc, char *argv[]){
     GLint personLoc = glGetUniformLocation(shader.Program, "model");
 
     GLfloat initTime = glfwGetTime();
+
     // Game loop
     while(!glfwWindowShouldClose(window)){
         // Set frame time
