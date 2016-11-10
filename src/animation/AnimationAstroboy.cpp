@@ -251,7 +251,6 @@ int main(int argc, char *argv[]){
 //            model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Para el xna model
             //model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el poli de half life 2
 //            model = glm::scale(model, glm::vec3(0.20f, 0.20f, 0.20f));	// Para el ninja
-
             glUniformMatrix4fv(personLoc, 1, GL_FALSE, glm::value_ptr(model));
             //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
             transInversMatrix = transpose(inverse(model));

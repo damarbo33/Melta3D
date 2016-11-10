@@ -324,11 +324,10 @@ private:
 
                 cout << "TicksPerSecond: " << TicksPerSecond << endl;
                 cout << "Duration of the animation in ticks: " << mp_scene->mAnimations[nAnim]->mDuration << endl;
-                cout << "Ticks per second: " <<  mp_scene->mAnimations[nAnim]->mTicksPerSecond << endl;
                 cout << "duration in s: " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond << " s" << endl;
+                cout << "Model FPS: " << getFpsModelFactor() * TicksPerSecond << endl;
 
                 const float endFrameTime = mp_scene->mAnimations[nAnim]->mDuration;
-                cout << "Model FPS: " << getFpsModelFactor() * TicksPerSecond << endl;
                 int nFrame = 0;
                 const int totalFrames = ceil(endFrameTime * getFpsModelFactor());
                 //Reserving space for all frames of the scene
