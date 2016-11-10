@@ -25,12 +25,16 @@ using namespace std;
 #include <assimp/Exporter.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <assimp/cimport.h>        // Plain-C interface
 
 #include "Mesh.h"
 #include "Animation.h"
 #include <common/texture.hpp>
 
 #include "ogldev_math_3d.h"
+
+#include <iostream>
+using namespace std;
 
 GLint TextureFromFile(const char* path, string directory);
 
@@ -43,11 +47,23 @@ public:
     */
     Model(GLchar* path, Shader *shader, int fpsModel = 30, bool precalculateBonesTransform = false){
         this->mp_scene = NULL;
+        this->bonesTransform = NULL;
         this->fpsModel = fpsModel;
+        this->importer = new Assimp::Importer();
         this->precalculateBonesTransform = precalculateBonesTransform;
         this->loadModel(path, shader);
         this->preprocessBones(shader);
 
+    }
+
+    /**
+    * Destructor
+    */
+    ~Model(){
+        cleanBones();
+        cleanMeshes();
+        cleanTextures();
+        cleanScene();
     }
 
     /**
@@ -73,9 +89,10 @@ public:
         if (this->hasAnimations()){
             if (this->precalculateBonesTransform){
                 int posAnimation = getAnimationTime(currentFrame, nAnim)  * (float)getFpsModel();
-                for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
-                    SetBoneTransform(BoneIndex, mf_transformBonesFinal[nAnim][posAnimation][BoneIndex]);
-                }
+                if (bonesTransform != NULL)
+                    for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
+                        SetBoneTransform(BoneIndex, bonesTransform[nAnim][posAnimation][BoneIndex]);
+                    }
             } else {
                 this->BoneTransform(currentFrame, nAnim);
                 for (int i = 0 ; i < m_BoneInfo.size() ; i++) {
@@ -151,28 +168,29 @@ public:
 private:
     /*  Model Data  */
     vector<Mesh *> meshes;
-    vector<Animation> animations;
     string directory;
     vector<Texture> textures_loaded;
     map <string, uint32_t>m_BoneMapping;
-    uint32_t m_NumBones;
     vector<BoneInfo> m_BoneInfo;
     GLuint m_boneLocation[MAX_BONES];
     GLuint m_animLoc;
+    uint32_t m_NumBones;
     int totalFramesModel;
     int fpsModel;
 
     //glm::mat4 m_GlobalInverseTransform;
     Matrix4f m_GlobalInverseTransform;
     const aiScene* mp_scene;
-    Assimp::Importer importer;
+    Assimp::Importer* importer;
     bool precalculateBonesTransform;
 
+    //We define this matrix to minimize the memory used, instead of a Matrix4f
     struct matrix4{
         float aa,ab,ac,ad,
               ba,bb,bc,bd,
               ca,cb,cc,cd;
               //da,db,dc,dd; //0,0,0,1
+
         matrix4(Matrix4f &mat){
             aa = mat.m[0][0]; ab = mat.m[0][1]; ac = mat.m[0][2]; ad = mat.m[0][3];
             ba = mat.m[1][0]; bb = mat.m[1][1]; bc = mat.m[1][2]; bd = mat.m[1][3];
@@ -187,9 +205,65 @@ private:
     };
     //vector with bones matrix transform, per time and per num of animation
     //mf_transformBonesFinal[nAnim][posAnimation][BoneIndex]
-    vector<vector<vector<matrix4 *> > > mf_transformBonesFinal;
+//    vector<vector<vector<matrix4 *> > > mf_transformBonesFinal;
 
+    //Creamos un array dinámico de tres dimensiones [nAnim][posAnimation][BoneIndex]
+    matrix4 ****bonesTransform;
 
+    /**
+    *
+    */
+    void cleanBones(){
+        if (mp_scene != NULL){
+            const int nAnimations = mp_scene->mNumAnimations;
+            if (bonesTransform != NULL){
+                for (int nAnim = 0; nAnim < nAnimations; nAnim++){
+                    const int nFrames = ceil(mp_scene->mAnimations[nAnim]->mDuration * (float)getFpsModel());
+                    for (int nFrame = 0; nFrame < nFrames; nFrame++){
+                        for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
+                            delete bonesTransform[nAnim][nFrame][BoneIndex];
+                        }
+                        delete [] bonesTransform[nAnim][nFrame];
+                    }
+                    delete [] bonesTransform[nAnim];
+                }
+                delete [] bonesTransform;
+                bonesTransform = NULL;
+            }
+        }
+
+        m_BoneMapping.clear();
+        m_BoneInfo.clear();
+    }
+
+    /**
+    *
+    */
+    void cleanMeshes(){
+        for (int i = 0; i < meshes.size(); i++){
+            delete meshes[i];
+        }
+        meshes.clear();
+    }
+
+    /**
+    *
+    */
+    void cleanTextures(){
+        for(GLuint j = 0; j < textures_loaded.size(); j++){
+            glDeleteTextures(1, &this->textures_loaded[j].id);
+        }
+        this->textures_loaded.clear();
+    }
+
+    /**
+    *
+    */
+    void cleanScene(){
+        // We're done. Release all resources associated with this import
+        //aiReleaseImport( mp_scene);
+        delete importer;
+    }
 
     /**
     *
@@ -233,12 +307,14 @@ private:
         float TimeInSeconds = 0.0f;
         Matrix4f Identity;
         Identity.InitIdentity();
+        const int nAnimations = mp_scene->mNumAnimations;
 
-        if (mp_scene != NULL && mp_scene->mNumAnimations > 0){
-            cout << "NumAnimations: " << mp_scene->mNumAnimations << endl;
-            for (int nAnim = 0; nAnim < mp_scene->mNumAnimations; nAnim++){
+        if (mp_scene != NULL && nAnimations > 0){
+            //Reserving space for all animations
+            bonesTransform = new matrix4*** [nAnimations];
+            cout << "NumAnimations: " << nAnimations << endl;
 
-                vector<vector<matrix4 *> > f_animationVector;
+            for (int nAnim = 0; nAnim < nAnimations; nAnim++){
 
                 const float TicksPerSecond = mp_scene->mAnimations[nAnim]->mTicksPerSecond > 0.0f ?
                         mp_scene->mAnimations[nAnim]->mTicksPerSecond : 25.0f;
@@ -249,25 +325,24 @@ private:
                 cout << "duration in s: " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond << " s" << endl;
 
                 const float endFrameTime = mp_scene->mAnimations[nAnim]->mDuration;
-                //const float inc = endFrameTime / TicksPerSecond / (float)getTotalFramesModel();
-                const float inc = 1.0f/(float)getFpsModel();
+                cout << "Model FPS: " << getFpsModel() << endl;
+                int nFrame = 0;
+                const int totalFrames = ceil(endFrameTime * (float)getFpsModel());
+                //Reserving space for all frames of the scene
+                bonesTransform[nAnim] = new matrix4** [totalFrames];
 
-                cout << "Inc: " << inc << endl;
-                int nFrames = 0;
-
-                for (float AnimationTime=0; AnimationTime < endFrameTime; AnimationTime+=inc){
-                    ReadNodeHeirarchy(AnimationTime, mp_scene->mRootNode, Identity);
-                    vector<matrix4 *> f_finalBoneTransform;
-
+                for (nFrame=0; nFrame < totalFrames; nFrame++){
+                    //Reading all the nodes
+                    ReadNodeHeirarchy(nFrame/ (float)getFpsModel(), mp_scene->mRootNode, Identity);
+                    //Reserving space for all transformation matrices for each bone
+                    bonesTransform[nAnim][nFrame] = new matrix4* [m_NumBones];
                     for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
-                        f_finalBoneTransform.push_back(new matrix4(m_BoneInfo[BoneIndex].FinalTransformation));
+                        bonesTransform[nAnim][nFrame][BoneIndex] = new matrix4(m_BoneInfo[BoneIndex].FinalTransformation);
                     }
-                    f_animationVector.push_back(f_finalBoneTransform);
-                    nFrames++;
                 }
-                cout << "Added: " << nFrames << " frames for " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond
+
+                cout << "Added: " << nFrame << " frames for " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond
                 << " seconds for animation " << nAnim << endl;
-                mf_transformBonesFinal.push_back(f_animationVector);
             }
         } else {
             cout << "NumAnimations: 0" << endl;
@@ -329,11 +404,11 @@ private:
                                              // collapsed and joined.
         0;
 
-        mp_scene = importer.ReadFile(path, ppsteps);
+        mp_scene = importer->ReadFile(path, ppsteps);
         // Check for errors
         if(!mp_scene || mp_scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !mp_scene->mRootNode) // if is Not Zero
         {
-            cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << endl;
+            cout << "ERROR::ASSIMP:: " << importer->GetErrorString() << endl;
             return;
         }
 //        Assimp::Exporter *exporter = new Assimp::Exporter();
@@ -348,7 +423,6 @@ private:
         this->processNode(mp_scene->mRootNode, mp_scene, shader);
         cout << "Meshes creados " << this->meshes.size() << endl;
     }
-
 
     /**
     * Processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
@@ -371,16 +445,14 @@ private:
     /**
     *
     */
-    Mesh * processMesh(GLuint idMesh, aiMesh* mesh, const aiScene* scene, Shader *shader)
-    {
+    Mesh * processMesh(GLuint idMesh, aiMesh* mesh, const aiScene* scene, Shader *shader){
         // Data to fill
         vector<Vertex> vertices;
         vector<GLuint> indices;
         vector<Texture> textures;
 
         // Walk through each of the mesh's vertices
-        for(GLuint i = 0; i < mesh->mNumVertices; i++)
-        {
+        for(GLuint i = 0; i < mesh->mNumVertices; i++){
             Vertex vertex;
             glm::vec3 vector; // We declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
             // Positions
@@ -422,6 +494,7 @@ private:
                 indices.push_back(face.mIndices[j]);
         }
         // Process materials
+
         if(mesh->mMaterialIndex >= 0)
         {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
@@ -443,6 +516,7 @@ private:
 //            cout << "opacityMaps.size(): " <<opacityMaps.size() << endl;
 //            aiTextureType_OPACITY
         }
+
         vector<VertexBoneData> Bones;
         processBones(idMesh, scene, Bones);
         // Return a mesh object created from the extracted mesh data
@@ -511,19 +585,17 @@ private:
 
             // Check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
             GLboolean skip = false;
-            for(GLuint j = 0; j < textures_loaded.size(); j++)
-            {
-                if(textures_loaded[j].path == str)
-                {
+            for(GLuint j = 0; j < textures_loaded.size(); j++){
+                if(textures_loaded[j].path == str){
                     textures.push_back(textures_loaded[j]);
                     skip = true; // A texture with the same filepath has already been loaded, continue to next one. (optimization)
                     break;
                 }
             }
+
             if(!skip)
             {   // If texture hasn't been loaded already, load it
                 Texture texture;
-//                cout << "dir: " << this->directory << ", file: " << str.C_Str() << endl;
                 texture.id = TextureFromFile(str.C_Str(), this->directory);
                 texture.type = typeName;
                 texture.path = str;
@@ -718,7 +790,7 @@ private:
         Matrix4f GlobalTransformation = ParentTransform * NodeTransformation;
 
         if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
-            uint32_t BoneIndex = m_BoneMapping[NodeName];
+            const uint32_t BoneIndex = m_BoneMapping[NodeName];
             m_BoneInfo[BoneIndex].FinalTransformation = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
         }
 
@@ -827,6 +899,9 @@ string getFileName(string file){
     }
 }
 
+/**
+*
+*/
 GLint TextureFromFile(const char* path, string directory)
 {
      //Generate texture ID and load texture data
@@ -835,50 +910,53 @@ GLint TextureFromFile(const char* path, string directory)
         filename = directory + '/' + getFileName(path);
     }
 
-//    if (fid)
     GLuint textureID;
-    glGenTextures(1, &textureID);
+//    glGenTextures(1, &textureID);
     int width,height;
 
     textureID = SOIL_load_OGL_texture(
             filename.c_str(),
             SOIL_LOAD_AUTO,
-            SOIL_CREATE_NEW_ID,
+            //SOIL_CREATE_NEW_ID,
+            textureID,
             0
             | SOIL_FLAG_POWER_OF_TWO
             | SOIL_FLAG_MIPMAPS
-            //| SOIL_FLAG_MULTIPLY_ALPHA
-            //| SOIL_FLAG_COMPRESS_TO_DXT
+            | SOIL_FLAG_COMPRESS_TO_DXT
             | SOIL_FLAG_DDS_LOAD_DIRECT
+            //| SOIL_FLAG_MULTIPLY_ALPHA
             //| SOIL_FLAG_NTSC_SAFE_RGB
             //| SOIL_FLAG_CoCg_Y
             //| SOIL_FLAG_TEXTURE_RECTANGLE
             );
 
         if( textureID > 0 ){
+            glBindTexture( GL_TEXTURE_2D, textureID );
 			glGenerateMipmap(GL_TEXTURE_2D);
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture( GL_TEXTURE_2D, textureID );
-            glBindTexture(GL_TEXTURE_2D, 0);
-//			std::cout << "the loaded texture ID was " << textureID << std::endl;
+			//unbinds texture
+			glBindTexture(GL_TEXTURE_2D, 0);
+			std::cout << "the loaded texture ID was " << textureID << std::endl;
 		} else {
-
-//		    std::cout << "Attempting to load image" << std::endl;
-            unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA); //SOIL_LOAD_AUTO
+		    std::cout << "Attempting to load image" << std::endl;
             // Assign texture to ID
-            //glBindTexture(GL_TEXTURE_2D, textureID);
+            glGenTextures(1, &textureID);
+            glBindTexture(GL_TEXTURE_2D, textureID);
+            unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA); //SOIL_LOAD_AUTO
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
             glGenerateMipmap(GL_TEXTURE_2D);
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//            glBindTexture(GL_TEXTURE_2D, 0);
+            //de allocates resources and unbinds texture
             SOIL_free_image_data(image);
-//            std::cout << "Image loaded" << std::endl;
+            glBindTexture(GL_TEXTURE_2D, 0);
+            std::cout << "Image loaded" << std::endl;
 		}
+
     return textureID;
 }

@@ -162,15 +162,15 @@ int main(int argc, char *argv[]){
     //Model ourModel("models/Moon_3D_Model/moon.obj");
     //Model ourModel("models/OldHouse2/Old House 2 3D Models.obj");
     //
-    Model ourModel("models/guard/boblampclean.md5mesh",&shader, 30, true);
+//    Model ourModel("models/guard/boblampclean.md5mesh",&shader, 30, true);
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
     //Model ourModel("models/GirlGame/Girl game N240416.obj");
     //Model ourModel("models/cs_italy/cs_italy.obj", &shader);
-    Model ourWorld("models/cs_assault/cs_assault.obj", &shader);
+    Model *ourWorld = new Model("models/cs_assault/cs_assault.obj", &shader);
     //Model ourModel("models/Small Tropical Island/Small Tropical Island.obj", &shader);
     //Model ourModel("models/lux/luxury house interior.obj", &shader);
-//    Model ourModel("models/ArmyPilot/ArmyPilot.ms3d", &shader, 30, true);
+    Model *ourModel = new Model("models/ArmyPilot/ArmyPilot.ms3d", &shader, 30, true);
     //Model ourModel("models/xna/dude.dae", &shader, 60);
     //Model ourModel("models/Police2/Police.obj", &shader, 60);
 //    Model ourModel("models/ninja/ninja.ms3d", &shader, 60);
@@ -240,11 +240,12 @@ int main(int argc, char *argv[]){
             model = glm::mat4();
             model = glm::translate(model, glm::vec3(j*2 % 20, -1.75f, j*2 / 20)); // Translate it down a bit so it's at the center of the scene
 //            model = glm::scale(model, glm::vec3(10.0f, 10.0f, 10.0f));	// Para astroboy
-            model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el de la lampara
+//            model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el de la lampara
 //            model = glm::scale(model, glm::vec3(0.15f, 0.15f, 0.15f));	// Para nanosuit
             //model = glm::scale(model, glm::vec3(0.6f, 0.6f, 0.6f));	// Para la bikinigirl
 //            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Para la bikinigirl
-//            model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.005f));	// Para el piloto
+            model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.005f));	// Para el piloto mesh
+//            model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.005f));	// Para el piloto dae
 //            model = glm::scale(model, glm::vec3(3.0f, 3.0f, 3.0f));	// Para el xna model
 //            model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Para el xna model
             //model = glm::scale(model, glm::vec3(0.035f, 0.035f, 0.035f));	// Para el poli de half life 2
@@ -255,7 +256,7 @@ int main(int argc, char *argv[]){
             transInversMatrix = transpose(inverse(model));
             glUniformMatrix4fv(transInversLoc, 1, GL_FALSE, glm::value_ptr(transInversMatrix));
             //Drawing the model
-            ourModel.Draw(&shader, currentFrame);
+            ourModel->Draw(&shader, currentFrame);
         }
         /**Fin modelo*/
 
@@ -270,7 +271,7 @@ int main(int argc, char *argv[]){
         transInversMatrix = transpose(inverse(model));
         glUniformMatrix4fv(transInversLoc, 1, GL_FALSE, glm::value_ptr(transInversMatrix));
         //Drawing the model
-        ourWorld.Draw(&shader, currentFrame);
+        ourWorld->Draw(&shader, currentFrame);
         /** Fin escenario*/
 
         // Also draw the lamp object, again binding the appropriate shader
@@ -298,6 +299,8 @@ int main(int argc, char *argv[]){
         glfwSwapBuffers(window);
     }
 
+    delete ourWorld;
+    delete ourModel;
     glfwTerminate();
     return 0;
 }
