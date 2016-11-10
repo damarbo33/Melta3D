@@ -162,7 +162,7 @@ int main(int argc, char *argv[]){
     //Model ourModel("models/Moon_3D_Model/moon.obj");
     //Model ourModel("models/OldHouse2/Old House 2 3D Models.obj");
     //
-//    Model *ourModel = new Model("models/guard/boblampclean.md5mesh",&shader, 30, true);
+    //Model *ourModel = new Model("models/guard/boblampclean.md5mesh",&shader, 3, true);
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
     //Model ourModel("models/GirlGame/Girl game N240416.obj");
@@ -170,8 +170,8 @@ int main(int argc, char *argv[]){
     Model *ourWorld = new Model("models/cs_assault/cs_assault.obj", &shader);
     //Model ourModel("models/Small Tropical Island/Small Tropical Island.obj", &shader);
     //Model ourModel("models/lux/luxury house interior.obj", &shader);
-    Model *ourModel = new Model("models/ArmyPilot/ArmyPilot.ms3d", &shader, 30, true);
-    //Model ourModel("models/xna/dude.dae", &shader, 60);
+    Model *ourModel = new Model("models/ArmyPilot/ArmyPilot.ms3d", &shader, 1, true);
+//    Model *ourModel = new Model("models/xna/dude.dae", &shader, 30, true);
     //Model ourModel("models/Police2/Police.obj", &shader, 60);
 //    Model ourModel("models/ninja/ninja.ms3d", &shader, 60);
 

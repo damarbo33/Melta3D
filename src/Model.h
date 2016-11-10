@@ -45,10 +45,10 @@ public:
     /**
     *Constructor, expects a filepath to a 3D model.
     */
-    Model(GLchar* path, Shader *shader, int fpsModel = 30, bool precalculateBonesTransform = false){
+    Model(GLchar* path, Shader *shader, float fpsModelFactor = 1, bool precalculateBonesTransform = false){
         this->mp_scene = NULL;
         this->bonesTransform = NULL;
-        this->fpsModel = fpsModel;
+        this->fpsModelFactor = fpsModelFactor;
         this->importer = new Assimp::Importer();
         this->precalculateBonesTransform = precalculateBonesTransform;
         this->loadModel(path, shader);
@@ -70,7 +70,7 @@ public:
     *
     */
     float getAnimationTime(GLfloat currentFrame, int nAnim){
-        if (getFpsModel() > 0.0){
+        if (getFpsModelFactor() > 0.0){
             float TicksPerSecond = mp_scene->mAnimations[nAnim]->mTicksPerSecond != 0.0f ?
             mp_scene->mAnimations[nAnim]->mTicksPerSecond : 25.0f;
             float TimeInTicks = currentFrame * TicksPerSecond;
@@ -88,7 +88,7 @@ public:
 
         if (this->hasAnimations()){
             if (this->precalculateBonesTransform){
-                int posAnimation = getAnimationTime(currentFrame, nAnim)  * (float)getFpsModel();
+                int posAnimation = getAnimationTime(currentFrame, nAnim) * getFpsModelFactor();
                 if (bonesTransform != NULL)
                     for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
                         SetBoneTransform(BoneIndex, bonesTransform[nAnim][posAnimation][BoneIndex]);
@@ -140,15 +140,15 @@ public:
     /**
     *
     */
-    int getFpsModel(){
-        return fpsModel;
+    float getFpsModelFactor(){
+        return fpsModelFactor;
     }
 
     /**
     *
     */
-    void setFpsModel(int var){
-        fpsModel = var;
+    void setFpsModelFactor(float var){
+        fpsModelFactor = var;
     }
 
     /**
@@ -176,7 +176,10 @@ private:
     GLuint m_animLoc;
     uint32_t m_NumBones;
     int totalFramesModel;
-    int fpsModel;
+    //This is a factor to multiply the number of frames for each model. There
+    //are cases wich assimp doesn't load well the model with the correct fps. So
+    //we multiply by this factor
+    float fpsModelFactor;
 
     //glm::mat4 m_GlobalInverseTransform;
     Matrix4f m_GlobalInverseTransform;
@@ -218,7 +221,7 @@ private:
             const int nAnimations = mp_scene->mNumAnimations;
             if (bonesTransform != NULL){
                 for (int nAnim = 0; nAnim < nAnimations; nAnim++){
-                    const int nFrames = ceil(mp_scene->mAnimations[nAnim]->mDuration * (float)getFpsModel());
+                    const int nFrames = ceil(mp_scene->mAnimations[nAnim]->mDuration * getFpsModelFactor());
                     for (int nFrame = 0; nFrame < nFrames; nFrame++){
                         for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
                             delete bonesTransform[nAnim][nFrame][BoneIndex];
@@ -325,15 +328,15 @@ private:
                 cout << "duration in s: " << mp_scene->mAnimations[nAnim]->mDuration / TicksPerSecond << " s" << endl;
 
                 const float endFrameTime = mp_scene->mAnimations[nAnim]->mDuration;
-                cout << "Model FPS: " << getFpsModel() << endl;
+                cout << "Model FPS: " << getFpsModelFactor() * TicksPerSecond << endl;
                 int nFrame = 0;
-                const int totalFrames = ceil(endFrameTime * (float)getFpsModel());
+                const int totalFrames = ceil(endFrameTime * getFpsModelFactor());
                 //Reserving space for all frames of the scene
                 bonesTransform[nAnim] = new matrix4** [totalFrames];
 
                 for (nFrame=0; nFrame < totalFrames; nFrame++){
                     //Reading all the nodes
-                    ReadNodeHeirarchy(nFrame/ (float)getFpsModel(), mp_scene->mRootNode, Identity);
+                    ReadNodeHeirarchy(nFrame / getFpsModelFactor(), mp_scene->mRootNode, Identity);
                     //Reserving space for all transformation matrices for each bone
                     bonesTransform[nAnim][nFrame] = new matrix4* [m_NumBones];
                     for (int BoneIndex=0; BoneIndex < m_NumBones; BoneIndex++){
