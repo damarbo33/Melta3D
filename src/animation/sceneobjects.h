@@ -1,21 +1,18 @@
 #ifndef SCENEOBJECTS_H
 #define SCENEOBJECTS_H
 
-#include <vector>
-#include <map>
-#include <string>
-
-// GLM Mathemtics
-#include <glm/glm.hpp>
-
-// GLFW
-#include <GLFW/glfw3.h>
+#include "../Model.h"
 
 #include "btBulletDynamicsCommon.h"
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../examples/CommonInterfaces/CommonRigidBodyBase.h"
-#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include "../common/structs.h"
+#include "../physics/Physics.h"
+
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 
 using namespace std;
 
@@ -40,12 +37,20 @@ class object3D2{
             spinningFriction = 1.0f;
             velocity = 1.5f;
             instantStop = true;
+            mass = 0.0f;
+            convex = true;
+            scaling = btVector3(1,1,1);
         }
         bool stencil;
-        string name;
+        string tag;
         float spinningFriction;
         float velocity;
         bool instantStop;
+        float mass;
+        bool convex;
+        btVector3 scaling;
+
+        btCollisionShape* createShapeWithVertices(Model *ourModel, bool convex, btVector3 scaling);
 
     private:
 
@@ -73,32 +78,19 @@ class SceneObjects
 
         bool stencil;
         vector <object3D *> listObjects;
+        int initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling);
+        bool getOMWorld(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
+        object3D2 *getObjPointer(int i);
 
-        struct MyContactResultCallback : public btCollisionWorld::ContactResultCallback
-        {
-            bool contact;
+        Physics * getPhysics(){
+            return physicsEngine;
+        }
 
-            MyContactResultCallback(){
-                contact = false;
-            }
-
-            btScalar addSingleResult(btManifoldPoint& cp,
-                const btCollisionObjectWrapper* colObj0Wrap,
-                int partId0,
-                int index0,
-                const btCollisionObjectWrapper* colObj1Wrap,
-                int partId1,
-                int index1)
-            {
-                contact = true;
-            }
-
-            bool isContact(){return contact;}
-        };
 
     protected:
 
     private:
+        Physics *physicsEngine;
 };
 
 

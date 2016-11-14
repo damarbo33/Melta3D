@@ -28,7 +28,7 @@
 
 #include "../lights/light.h"
 
-#include "../physics/Physics.h"
+
 
 
 
@@ -43,7 +43,7 @@ void Do_Movement();
 void processLights(vector<Light *> &luces, Shader &shader);
 void initLights(vector<Light *> &luces, Shader &shader);
 void activateObjectOutlining();
-int initShape(btVector3 initialPosition);
+int initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling);
 int initGround();
 GLuint loadTexture(GLchar* path);
 bool getOMWorld(int i, glm::vec3 scale, glm::vec3 offset, glm::mat4 &model);
@@ -59,53 +59,13 @@ bool firstMouse = true;
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
-Physics *physicsEngine = new Physics();
+SceneObjects sceneObjects;
 
 glm::vec2 escenaAtras = glm::vec2(2.85,2.85);
 glm::vec2 escenaAdelante = glm::vec2(0.0,3.0);
 glm::vec2 escenaParado = glm::vec2(21.25,10.0);
 glm::vec2 estadoPersonaje = escenaParado;
 
-
-
-//struct ContactSensorCallback : public btCollisionWorld::ContactResultCallback {
-//
-//    //! Constructor, pass whatever context you want to have available when processing contacts
-//    /*! You may also want to set m_collisionFilterGroup and m_collisionFilterMask
-//     *  (supplied by the superclass) for needsCollision() */
-//    ContactSensorCallback(btRigidBody& tgtBody /*, YourContext& context*/ /*, ... */)
-//        : btCollisionWorld::ContactResultCallback(), body(tgtBody)/*, ctxt(context)*/ { }
-//
-//    btRigidBody& body; //!< The body the sensor is monitoring
-//    //YourContext& ctxt; //!< External information for contact processing
-//
-//    //! If you don't want to consider collisions where the bodies are joined by a constraint, override needsCollision:
-//    /*! However, if you use a btCollisionObject for #body instead of a btRigidBody,
-//     *  then this is unnecessary—checkCollideWithOverride isn't available */
-//    virtual bool needsCollision(btBroadphaseProxy* proxy) const {
-//        // superclass will check m_collisionFilterGroup and m_collisionFilterMask
-//        if(!btCollisionWorld::ContactResultCallback::needsCollision(proxy))
-//            return false;
-//        // if passed filters, may also want to avoid contacts between constraints
-//        return body.checkCollideWithOverride(static_cast<btCollisionObject*>(proxy->m_clientObject));
-//    }
-//
-//    //! Called with each contact for your own processing (e.g. test if contacts fall in within sensor parameters)
-//    virtual btScalar addSingleResult(btManifoldPoint& cp,
-//        const btCollisionObjectWrapper* colObj0,int partId0,int index0,
-//        const btCollisionObjectWrapper* colObj1,int partId1,int index1)
-//    {
-//        btVector3 pt; // will be set to point of collision relative to body
-//        if(colObj0->m_collisionObject==&body) {
-//            pt = cp.m_localPointA;
-//        } else {
-//            assert(colObj1->m_collisionObject==&body && "body does not match either collision object");
-//            pt = cp.m_localPointB;
-//        }
-//        // do stuff with the collision point
-//        return 0; // There was a planned purpose for the return value of addSingleResult, but it is not used so you can ignore it.
-//    }
-//};
 // The MAIN function, from here we start our application and run our Game loop
 int main(int argc, char *argv[]){
 
@@ -276,15 +236,15 @@ int main(int argc, char *argv[]){
     glFrontFace(GL_CW);
 
 
-    physicsEngine->getDynamicsWorld()->setGravity(btVector3(0, -9.8f, 0));
+
     initGround();
     int inicio = 0;
 
-    SceneObjects sceneObjects;
     //sceneObjects.activateStencil(true);
-
     for (int i=0; i < 2; i++){
-        initShape(btVector3(i*2 % 20, 0.0f, i*2 / 20));
+        sceneObjects.initShape(btVector3(i*2 % 20, 0.0f, i*2 / 20),
+                  ourModel,
+                  btVector3(0.005f, 0.005f, 0.005f));
 //        initShape(btVector3(0, i*3+50, 0));
     }
 
@@ -342,32 +302,30 @@ int main(int argc, char *argv[]){
 
         /** para la escena del modelo*/
         //Calculate the physics
-        physicsEngine->getDynamicsWorld()->stepSimulation(deltaTime); //suppose you have 60 frames per second
+        sceneObjects.getPhysics()->getDynamicsWorld()->stepSimulation(deltaTime); //suppose you have 60 frames per second
 
-        btCollisionObject* obj = physicsEngine->getDynamicsWorld()->getCollisionObjectArray()[1];
-        btRigidBody* capsuleBody = btRigidBody::upcast(obj);
-        btTransform newTrans = capsuleBody->getWorldTransform();
-
-//        camera.Position.x = newTrans.getOrigin().x() + 0.5;
-//        camera.Position.y = newTrans.getOrigin().y() + 0.5;
-//        camera.Position.z = newTrans.getOrigin().z();
-
-        for (int i = 0; i< physicsEngine->getCollisionObjectCount(); i++) {
-            model = glm::mat4();
-            if (getOMWorld(i, glm::vec3(0.005f, 0.005f, 0.005f), glm::vec3(0.0f, -0.5f, 0.0f), model)){
-                glUniformMatrix4fv(personLoc, 1, GL_FALSE, glm::value_ptr(model));
-                //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
-                transInversMatrix = transpose(inverse(model));
-                glUniformMatrix4fv(transInversLoc, 1, GL_FALSE, glm::value_ptr(transInversMatrix));
-                //Drawing the model
-                ourModel->Draw(&shader, estadoPersonaje.x + fmod(currentFrame * 2.0f, estadoPersonaje.y));
+        for (int i = 0; i< sceneObjects.getPhysics()->getCollisionObjectCount(); i++) {
+            object3D2 *userPointer = sceneObjects.getObjPointer(i);
+            if (userPointer) {
+                model = glm::mat4();
+                if (sceneObjects.getOMWorld(i,
+                               glm::vec3(userPointer->scaling.x(), userPointer->scaling.y(), userPointer->scaling.z()),
+                               glm::vec3(0.0f, 0.45f, 0.0f), model))
+                {
+                    glUniformMatrix4fv(personLoc, 1, GL_FALSE, glm::value_ptr(model));
+                    //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
+                    transInversMatrix = transpose(inverse(model));
+                    glUniformMatrix4fv(transInversLoc, 1, GL_FALSE, glm::value_ptr(transInversMatrix));
+                    //Drawing the model
+                    ourModel->Draw(&shader, estadoPersonaje.x + fmod(currentFrame * 2.0f, estadoPersonaje.y));
+                }
             }
 		}
         /**Fin modelo*/
 
         model = glm::mat4();
         /**Un piso de ejemplo*/
-        if (!getOMWorld(0, glm::vec3(1,1,1), glm::vec3(0,0,0), model)){
+        if (!sceneObjects.getOMWorld(0, glm::vec3(1,1,1), glm::vec3(0,0,0), model)){
             glFrontFace(GL_CCW);
             floorShader.Use();
             glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -414,19 +372,16 @@ int main(int argc, char *argv[]){
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        for (int i = 1; i< physicsEngine->getCollisionObjectCount(); i++) {
-            model = glm::mat4();
-            if (getOMWorld(i, glm::vec3(0.3,1,0.3), glm::vec3((i-1)*2 % 20, 0, (i-1)*2 / 20), model)){
-                glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-                transInversMatrix = transpose(inverse(model));
-                glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
-                glDrawArrays(GL_TRIANGLES, 0, 36);
-                glBindVertexArray(0);
-            }
-        }
-
-
-
+//        for (int i = 1; i< physicsEngine->getCollisionObjectCount(); i++) {
+//            model = glm::mat4();
+//            if (getOMWorld(i, glm::vec3(0.3,1,0.3), glm::vec3((i-1)*2 % 20, 0, (i-1)*2 / 20), model)){
+//                glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+//                transInversMatrix = transpose(inverse(model));
+//                glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
+//                glDrawArrays(GL_TRIANGLES, 0, 36);
+//                glBindVertexArray(0);
+//            }
+//        }
 
         // Swap the buffers
         glfwSwapBuffers(window);
@@ -445,8 +400,6 @@ void activateObjectOutlining(){
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 }
-
-
 
 /**
 * Is called whenever a key is pressed/released via GLFW
@@ -647,57 +600,9 @@ int initGround(){
     groundBody->setRollingFriction(btScalar(10.0));
     groundBody->setSpinningFriction(btScalar(1.0));
     //add the body to the dynamics world
-    physicsEngine->getDynamicsWorld()->addRigidBody(groundBody);
+    sceneObjects.getPhysics()->getDynamicsWorld()->addRigidBody(groundBody);
 
     return 0;
-}
-
-/**
-*
-*/
-int initShape(btVector3 initialPosition){
-    //create the new shape, and tell the physics that is a Box
-    btCollisionShape *newRigidShape = new btCylinderShape(btVector3(0.3f, 1.0f, 0.3f));
-    physicsEngine->getCollisionShapes()->push_back(newRigidShape);
-
-    //set the initial position and transform. For this demo, we set the tranform to be none
-    btTransform startTransform;
-    startTransform.setIdentity();
-    startTransform.setRotation(btQuaternion(0,0,0,1));
-
-    //set the mass of the object. a mass of "0" means that it is an immovable object
-    btScalar mass = 0.1f;
-    btVector3 localInertia(0,0,0);
-    //btVector3 localInertia(1.0f, 1.0f, 1.0f);
-
-    startTransform.setOrigin(initialPosition);
-    newRigidShape->calculateLocalInertia(mass, localInertia);
-
-    //actually contruct the body and add it to the dynamics world
-    btDefaultMotionState *myMotionState = new btDefaultMotionState(startTransform);
-
-    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, newRigidShape, localInertia);
-    btRigidBody *body = new btRigidBody(rbInfo);
-    //Set bounce property
-    body->setRestitution(0.0);
-
-    object3D2 *obj = new object3D2();
-    obj->spinningFriction = 10.0f;
-    obj->name = "model";
-    obj->instantStop = false;
-    body->setUserPointer(obj);
-
-    body->setRollingFriction(0.1f);
-    body->setFriction(0.1f);
-
-    //restricting movement in planes
-    body->setLinearFactor(btVector3(1,1,1));
-    body->setAngularFactor(btVector3(0,0,0));
-
-    body->setActivationState(DISABLE_DEACTIVATION);
-
-    physicsEngine->getDynamicsWorld()->addRigidBody(body);
-    //physicsEngine->trackRigidBodyWithName(body, physicsCubeName);
 }
 
 /**
@@ -715,15 +620,14 @@ void Do_Movement()
     if(keys[GLFW_KEY_D])
         camera.ProcessKeyboard(RIGHT, deltaTime);
 
-    btCollisionObject* world = physicsEngine->getDynamicsWorld()->getCollisionObjectArray()[0];
-    btCollisionObject* obj = physicsEngine->getDynamicsWorld()->getCollisionObjectArray()[1];
+    btCollisionObject* world = sceneObjects.getPhysics()->getDynamicsWorld()->getCollisionObjectArray()[0];
+    btCollisionObject* obj = sceneObjects.getPhysics()->getDynamicsWorld()->getCollisionObjectArray()[1];
 
     btRigidBody* capsuleBody = btRigidBody::upcast(obj);
     bool out = false;
     if (capsuleBody && capsuleBody->getMotionState()){
         btTransform trans;
         capsuleBody->getMotionState()->getWorldTransform(trans);
-
         object3D2 *userPointer = (object3D2 *)capsuleBody->getUserPointer();
         if (userPointer) {
             btVector3 impulseAxis = capsuleBody->getWorldTransform().getBasis().getColumn(0);
@@ -783,8 +687,8 @@ void Do_Movement()
             //cout << world->getWorldTransform().getOrigin().getY() << endl;
 
             if (keys[GLFW_KEY_SPACE]){
-                SceneObjects::MyContactResultCallback callback;
-                physicsEngine->getDynamicsWorld()->contactPairTest(world, obj, callback);
+                Physics::MyContactResultCallback callback;
+                sceneObjects.getPhysics()->getDynamicsWorld()->contactPairTest(world, obj, callback);
                 if (callback.isContact()){
                     btVector3 impulseJump = capsuleBody->getLinearVelocity();
                     impulseJump.setY(3.0f);
@@ -819,34 +723,6 @@ GLuint loadTexture(GLchar* path)
     SOIL_free_image_data(image);
     return textureID;
 
-}
-
-/**
-*
-*/
-bool getOMWorld(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model){
-    btCollisionObject* obj = physicsEngine->getDynamicsWorld()->getCollisionObjectArray()[i];
-    btRigidBody* body = btRigidBody::upcast(obj);
-    bool out = false;
-    if (body && body->getMotionState()){
-        btTransform trans;
-        body->getMotionState()->getWorldTransform(trans);
-
-        void *userPointer = body->getUserPointer();
-        if (userPointer) {
-            btQuaternion orientation = trans.getRotation();
-            glm::quat MyQuaternion   = glm::quat(orientation.getW(),orientation.getX(), orientation.getY(), orientation.getZ());
-            glm::mat4 RotationMatrix = glm::toMat4(MyQuaternion);
-            model = glm::translate(model, glm::vec3(trans.getOrigin().getX()
-                    + offset.x, trans.getOrigin().getY() + offset.y, trans.getOrigin().getZ() + offset.z));
-            model = glm::scale(model, glm::vec3(scale.x, scale.y, scale.z));	// Para el piloto mesh
-            model =  model * RotationMatrix;
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            out = true;
-        }
-    }
-
-    return out;
 }
 
 #pragma endregion

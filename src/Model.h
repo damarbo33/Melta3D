@@ -1,3 +1,8 @@
+#ifndef MODEL_H_INCLUDED
+#define MODEL_H_INCLUDED
+
+
+
 #pragma once
 // Std. Includes
 #include <string>
@@ -163,6 +168,13 @@ public:
                 ReadNodeHeirarchy(getAnimationTime(TimeInSeconds, nAnimation), mp_scene->mRootNode, Identity);
             }
         }
+    }
+
+    /**
+    *
+    */
+    vector<Mesh *>* getMeshes(){
+        return &meshes;
     }
 
 private:
@@ -844,10 +856,7 @@ private:
 //        m[3][3] = 1.0f;
 //    }
 
-
-};
-
-/**
+    /**
 *
 */
 bool isDir(string ruta){
@@ -962,3 +971,9 @@ GLint TextureFromFile(const char* path, string directory)
 
     return textureID;
 }
+
+};
+
+
+
+#endif // MODEL_H_INCLUDED

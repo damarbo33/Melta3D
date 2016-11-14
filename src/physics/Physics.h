@@ -20,6 +20,28 @@ class Physics{
         std::vector<btCollisionShape *>* getCollisionShapes(){return &collisionShapes;}
         int getCollisionObjectCount(){return dynamicsWorld->getCollisionObjectArray().size() ;}
 
+        struct MyContactResultCallback : public btCollisionWorld::ContactResultCallback
+        {
+            bool contact;
+
+            MyContactResultCallback(){
+                contact = false;
+            }
+
+            btScalar addSingleResult(btManifoldPoint& cp,
+                const btCollisionObjectWrapper* colObj0Wrap,
+                int partId0,
+                int index0,
+                const btCollisionObjectWrapper* colObj1Wrap,
+                int partId1,
+                int index1)
+            {
+                contact = true;
+            }
+
+            bool isContact(){return contact;}
+        };
+
     protected:
         btDefaultCollisionConfiguration* collisionConfiguration;
         btCollisionDispatcher* dispatcher;
