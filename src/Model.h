@@ -946,8 +946,8 @@ GLint TextureFromFile(const char* path, string directory)
 //		    std::cout << "Attempting to load image" << std::endl;
             // Assign texture to ID if we failed from SOIL_load_OGL_texture
             glGenTextures(1, &textureID);
-            glBindTexture(GL_TEXTURE_2D, textureID);
             unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA); //SOIL_LOAD_AUTO
+            glBindTexture(GL_TEXTURE_2D, textureID);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
             glGenerateMipmap(GL_TEXTURE_2D);
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
