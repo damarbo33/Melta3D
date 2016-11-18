@@ -130,6 +130,10 @@ public:
         return &vertices;
     }
 
+    vector<GLuint> * getIndices(){
+        return &indices;
+    }
+
 
     /*  Functions  */
     // Constructor
@@ -168,8 +172,7 @@ public:
     /**
     * Render the mesh
     */
-    void Draw(Shader *shader)
-    {
+    void Draw(Shader *shader){
         // Bind appropriate textures
         for(GLuint i = 0; i < this->textures.size(); i++)
         {

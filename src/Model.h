@@ -38,6 +38,12 @@ using namespace std;
 
 #include "ogldev_math_3d.h"
 
+#include "btBulletDynamicsCommon.h"
+#include "BulletCollision/CollisionShapes/btShapeHull.h"
+#include "LinearMath/btVector3.h"
+#include "LinearMath/btAlignedObjectArray.h"
+#include "../examples/CommonInterfaces/CommonRigidBodyBase.h"
+
 #include <iostream>
 using namespace std;
 
@@ -47,18 +53,28 @@ class Model
 {
 public:
 
+    Model(){
+        this->importer = NULL;
+        this->mp_scene = NULL;
+        this->bonesTransform = NULL;
+        this->triMeshPhis = NULL;
+        this->physMesh = new btTriangleMesh();
+    }
     /**
     *Constructor, expects a filepath to a 3D model.
     */
     Model(GLchar* path, Shader *shader, float fpsModelFactor = 1, bool precalculateBonesTransform = false){
+        this->importer = NULL;
         this->mp_scene = NULL;
         this->bonesTransform = NULL;
-        this->fpsModelFactor = fpsModelFactor;
+        this->triMeshPhis = NULL;
+        this->physMesh = new btTriangleMesh();
+
         this->importer = new Assimp::Importer();
+        this->fpsModelFactor = fpsModelFactor;
         this->precalculateBonesTransform = precalculateBonesTransform;
         this->loadModel(path, shader);
         this->preprocessBones(shader);
-
     }
 
     /**
@@ -176,10 +192,15 @@ public:
     vector<Mesh *>* getMeshes(){
         return &meshes;
     }
-
-private:
     /*  Model Data  */
     vector<Mesh *> meshes;
+
+    btVector3** getTriMeshPhis(){return triMeshPhis;}
+    btVector3** triMeshPhis;
+    btTriangleMesh* physMesh;
+
+private:
+
     string directory;
     vector<Texture> textures_loaded;
     map <string, uint32_t>m_BoneMapping;
@@ -198,6 +219,9 @@ private:
     const aiScene* mp_scene;
     Assimp::Importer* importer;
     bool precalculateBonesTransform;
+
+
+
 
     //We define this matrix to minimize the memory used, instead of a Matrix4f
     struct matrix4{
@@ -277,7 +301,8 @@ private:
     void cleanScene(){
         // We're done. Release all resources associated with this import
         //aiReleaseImport( mp_scene);
-        delete importer;
+        if (importer != NULL)
+            delete importer;
     }
 
     /**

@@ -4,6 +4,7 @@
 #include "../Model.h"
 
 #include "btBulletDynamicsCommon.h"
+#include "BulletCollision/CollisionShapes/btShapeHull.h"
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../examples/CommonInterfaces/CommonRigidBodyBase.h"
@@ -40,14 +41,21 @@ class object3D2{
             mass = 0.0f;
             convex = true;
             scaling = btVector3(1,1,1);
+            groundContact = false;
         }
         bool stencil;
         string tag;
         float spinningFriction;
         float velocity;
-        bool instantStop;
         float mass;
+        //Specify if the object is concave or convex. Always convex=true is better for performance
         bool convex;
+        //This makes some calcules that implies some overhead to reset the forces
+        //when an object touches floor
+        bool instantStop;
+        //flag to know if a object touches floor. By now, it is informed only when instantStop = true
+        bool groundContact;
+        //Scaling for the object
         btVector3 scaling;
 
         btCollisionShape* createShapeWithVertices(Model *ourModel, bool convex, btVector3 scaling);
@@ -80,6 +88,7 @@ class SceneObjects
         vector <object3D *> listObjects;
         int initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling);
         bool getOMWorld(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
+        bool getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
         object3D2 *getObjPointer(int i);
 
         Physics * getPhysics(){
