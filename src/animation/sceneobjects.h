@@ -42,7 +42,9 @@ class object3D2{
             convex = true;
             scaling = btVector3(1,1,1);
             groundContact = false;
+            shape = NULL;
         }
+
         bool stencil;
         string tag;
         float spinningFriction;
@@ -57,6 +59,8 @@ class object3D2{
         bool groundContact;
         //Scaling for the object
         btVector3 scaling;
+
+        btCollisionShape* shape;
 
         btCollisionShape* createShapeWithVertices(Model *ourModel, bool convex, btVector3 scaling);
 

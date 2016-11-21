@@ -160,12 +160,12 @@ int main(int argc, char *argv[]){
         5.0f,  0, -5.0f,  3.0f, 3.0f,
         //Para la pared izquierda
         -5.0f, 5.0f,  5.0f,  3.0f, 0.0f,
-        -5.0f, -5.0f,  5.0f,  0.0f, 0.0f,
-        -5.0f, -5.0f, -5.0f,  0.0f, 3.0f,
+        -5.0f, -5.0f, -5.0f,  0.0f, 0.0f,
+        -5.0f, 5.0f, -5.0f,  0.0f, 3.0f,
 
-        -5.0f, 5.0f,  5.0f,  3.0f, 0.0f,
-        -5.0f, -5.0f, -5.0f,  0.0f, 3.0f,
-        -5.0f, 5.0f, -5.0f,  3.0f, 3.0f,
+        -5.0f, -5.0f, -5.0f,  3.0f, 0.0f,
+        -5.0f, 5.0f, 5.0f,  0.0f, 3.0f,
+        -5.0f, -5.0f, 5.0f,  3.0f, 3.0f,
 
     };
 
@@ -223,7 +223,7 @@ int main(int argc, char *argv[]){
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
     //Model ourModel("models/GirlGame/Girl game N240416.obj");
-    //Model ourModel("models/cs_italy/cs_italy.obj", &shader);
+    //Model *ourWorld = new Model("models/cs_italy/cs_italy.obj", &shader);
     Model *ourWorld = new Model("models/cs_assault/cs_assault.obj", &shader);
     //Model ourModel("models/Small Tropical Island/Small Tropical Island.obj", &shader);
     //Model ourModel("models/lux/luxury house interior.obj", &shader);
@@ -272,13 +272,13 @@ int main(int argc, char *argv[]){
 //    initGround(btVector3(0,0,0), ourWorld, btVector3(0.05f, 0.05f, 0.05f));
     initGround(btVector3(0,-2600,0), btVector3(0,0,0), ourWorld, btVector3(0.01, 0.01,0.01));
     //initGround(btVector3(0,0,0), btVector3(5.0f,0,5.0f), ourWorld, btVector3(1,1,1));
-//    initGround(btVector3(0,-4,0), btVector3(5.0f,0,5.0f), ourWorld2, btVector3(1,1,1));
+    //initGround(btVector3(0,-4,0), btVector3(5.0f,0,5.0f), ourWorld2, btVector3(1,1,1));
 
     int inicio = 0;
 
     //sceneObjects.activateStencil(true);
     for (int i=0; i < 2; i++){
-        sceneObjects.initShape(btVector3(i*2 % 20, 0, i*2 / 20),
+        sceneObjects.initShape(btVector3(i*2 % 20+1, 0, i*2 / 20+1),
                   ourModel,
                   btVector3(0.005f, 0.005f, 0.005f));
                   //btVector3(1, 1, 1));
@@ -363,6 +363,9 @@ int main(int argc, char *argv[]){
         glFrontFace(GL_CW);
 
 
+
+
+
 //        model = glm::mat4();
 //        object3D2 *userPointer = sceneObjects.getObjPointer(0);
 //        /**Un piso de ejemplo*/
@@ -388,7 +391,6 @@ int main(int argc, char *argv[]){
 //        }
 //        /**Fin piso de ejemplo*/
 
-
         /**Para el escenario*/
         object3D2 *userPointer = sceneObjects.getObjPointer(0);
         if (userPointer->tag.compare("ground") == 0) {
@@ -398,34 +400,55 @@ int main(int argc, char *argv[]){
                            glm::vec3(0.0f, 0.0f, 0.0f),
                             model))
             {
+                model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
                 glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
                 //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
                 transInversMatrix = transpose(inverse(model));
                 glUniformMatrix4fv(transInversLoc, 1, GL_FALSE, glm::value_ptr(transInversMatrix));
-                //Drawing the model
+                //Drawing the world
                 ourWorld->Draw(&shader, currentFrame);
             }
         }
         /** Fin escenario*/
 
+        //floorShader.Use();
+        model = glm::mat4();
+        object3D2 *userPointer2 = sceneObjects.getObjPointer(0);
+        /**SALIDA DE DEBUG*/
+        //if (sceneObjects.getWorldModel(0, glm::vec3(userPointer2->scaling.x(), userPointer2->scaling.y(), userPointer2->scaling.z())
+        if (sceneObjects.getWorldModel(0, glm::vec3(1,1,1)
+                                       , glm::vec3(0,0,0),
+                                       model)){
+            glFrontFace(GL_CCW);
+            floorShader.Use();
+            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            sceneObjects.getPhysics()->getDynamicsWorld()->debugDrawWorld();
+        }
+        /**SALIDA DE DEBUG*/
+
+
+
+
         // Also draw the lamp object, again binding the appropriate shader
         lampShader.Use();
 
         // Set matrices
-        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+//        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+//        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
         // We now draw as many light bulbs as we have point lights.
-        glBindVertexArray(lightVAO);
-        for (GLuint i = 0; i < 2; i++){
-            model = glm::mat4();
-            model = glm::translate(model, luces.at(i+1)->vPosition);
-            model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
-            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-            glm::mat4 transInversMatrix = transpose(inverse(model));
-            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+//        glBindVertexArray(lightVAO);
+//        for (GLuint i = 0; i < 2; i++){
+//            model = glm::mat4();
+//            model = glm::translate(model, luces.at(i+1)->vPosition);
+//            model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
+//            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+//            glm::mat4 transInversMatrix = transpose(inverse(model));
+//            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
+//            glDrawArrays(GL_TRIANGLES, 0, 36);
+//        }
 
 //        for (int i = 1; i< physicsEngine->getCollisionObjectCount(); i++) {
 //            model = glm::mat4();
@@ -639,8 +662,8 @@ int initGround(btVector3 initialPosition, btVector3 dimension, Model *ourModel, 
                                         initialPosition.y() * scaling.y(),
                                         initialPosition.z() * scaling.z()));
 
-    float RotationAngle = glm::radians(180.0f);
-    groundTransform.setRotation(btQuaternion(0,0,0,cos(RotationAngle / 2.0f)));
+//    float RotationAngle = glm::radians(180.0f);
+//    groundTransform.setRotation(btQuaternion(0,0,0,cos(RotationAngle / 2.0f)));
 
     btScalar groundMass(0.); //the mass is 0, because the ground is immovable (static)
     btVector3 localGroundInertia(0, 0, 0);

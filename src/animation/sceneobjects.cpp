@@ -3,6 +3,7 @@
 SceneObjects::SceneObjects()
 {
     this->stencil = false;
+
     physicsEngine = new Physics();
     physicsEngine->getDynamicsWorld()->setGravity(btVector3(0, -9.8f, 0));
 }
@@ -29,7 +30,7 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel, bool conve
     //1
     if (convex){
         //2
-        btConvexHullShape* _shape = new btConvexHullShape();
+        this->shape = new btConvexHullShape();
         for (int idMesh=0; idMesh < ourModel->getMeshes()->size(); idMesh++){
 
             vector<Vertex> *vertices = ourModel->getMeshes()->at(idMesh)->getVertices();
@@ -40,33 +41,33 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel, bool conve
 //            if (index_count > 0){
 //                for (int i=0; i < index_count; i++){
 //                    const Vertex vec1 = vertices->at(indices->at(i));
-//                    _shape->addPoint(btVector3(vec1.Position[0], vec1.Position[1], vec1.Position[2]));
+//                    _this->shape->addPoint(btVector3(vec1.Position[0], vec1.Position[1], vec1.Position[2]));
 //                }
 //            } else {
                 for (int i = 0; i < vertices->size(); i+=4){
                     const Vertex v = vertices->at(i);
-                    _shape->addPoint(btVector3(v.Position[0], v.Position[1], v.Position[2]));
+                    ((btConvexHullShape*)this->shape)->addPoint(btVector3(v.Position[0], v.Position[1], v.Position[2]));
                 }
 //            }
 
 
         }
-        _shape->setLocalScaling(scaling);
-        return _shape;
+        this->shape->setLocalScaling(scaling);
+        return this->shape;
 
-//        ((btConvexHullShape*)_shape)->setLocalScaling(scaling);
+//        ((btConvexHullShape*)_this->shape)->setLocalScaling(scaling);
 //        //create a hull approximation
-//        btShapeHull* hull = new btShapeHull(((btConvexHullShape*)_shape));
-//        btScalar margin = _shape->getMargin();
+//        btShapeHull* hull = new btShapeHull(((btConvexHullShape*)_this->shape));
+//        btScalar margin = _this->shape->getMargin();
 //        hull->buildHull(margin);
 //        btConvexHullShape* simplifiedConvexShape = new btConvexHullShape(hull->getVertexPointer(),hull->numVertices());
-//        delete _shape;
+//        delete _this->shape;
 //        return simplifiedConvexShape;
     }
     else
     {
         //3
-        /**ATTENTION: We are using a static-triangle mesh shape,
+        /**ATTENTION: We are using a static-triangle mesh this->shape,
         *  it can only be used for fixed/non-moving objects
         */
         float maxX=0, minX=0, maxY=0, minY=0, maxZ=0, minZ=0;
@@ -196,13 +197,12 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel, bool conve
         cout << "Added " << cFace << " faces"<< endl;
 
         cout << "mesh with " << ourModel->physMesh->getNumTriangles() << " triangles" << endl;
-        btBvhTriangleMeshShape* _shape = NULL;
         if (ourModel->physMesh->getNumTriangles() > 0){
-            _shape = new btBvhTriangleMeshShape(ourModel->physMesh, true);
-            _shape->setLocalScaling(scaling);
+            this->shape = new btBvhTriangleMeshShape(ourModel->physMesh, true);
+            this->shape->setLocalScaling(scaling);
 //        } else if (triangleIndex != NULL && triangleIndex->getNumSubParts() > 0){
-//            _shape = new btBvhTriangleMeshShape(triangleIndex, true);
-//            _shape->setLocalScaling(scaling);
+//            _this->shape = new btBvhTriangleMeshShape(triangleIndex, true);
+//            _this->shape->setLocalScaling(scaling);
         } else {
             cout << "createShapeWithVertices: Shape without indices" << endl;
         }
@@ -211,7 +211,7 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel, bool conve
         "maxY: " << maxY << " minY: " << minY <<
         "maxZ: " << maxZ << " minZ: " << minZ << endl;
 
-        return _shape;
+        return this->shape;
     }
 }
 

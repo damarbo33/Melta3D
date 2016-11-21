@@ -3,6 +3,7 @@
 #include "LinearMath/btAlignedObjectArray.h"
 #include "../examples/CommonInterfaces/CommonRigidBodyBase.h"
 
+#include "mydebug.h"
 
 #include <vector>
 #include <map>

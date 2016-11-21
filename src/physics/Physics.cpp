@@ -18,4 +18,7 @@ void Physics::initObjects() {
 	overlappingPairCache = new btDbvtBroadphase();
 	solver = new btSequentialImpulseConstraintSolver();
 	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+
+	CibtDebugDraw *debuger = new CibtDebugDraw();
+	dynamicsWorld->setDebugDrawer(debuger);
 }
