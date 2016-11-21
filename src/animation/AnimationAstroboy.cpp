@@ -280,7 +280,7 @@ int main(int argc, char *argv[]){
     for (int i=0; i < 2; i++){
         sceneObjects.initShape(btVector3(i*2 % 20+1, 0, i*2 / 20+1),
                   ourModel,
-                  btVector3(0.005f, 0.005f, 0.005f));
+                  btVector3(0.004f, 0.004f, 0.004f));
                   //btVector3(1, 1, 1));
 //                  btVector3(0.0012f, 0.0012f, 0.0012f));
 //        initShape(btVector3(0, i*3+50, 0));
@@ -413,19 +413,22 @@ int main(int argc, char *argv[]){
 
         //floorShader.Use();
         model = glm::mat4();
-        object3D2 *userPointer2 = sceneObjects.getObjPointer(0);
+//        object3D2 *userPointer2 = sceneObjects.getObjPointer(0);
         /**SALIDA DE DEBUG*/
-        //if (sceneObjects.getWorldModel(0, glm::vec3(userPointer2->scaling.x(), userPointer2->scaling.y(), userPointer2->scaling.z())
-        if (sceneObjects.getWorldModel(0, glm::vec3(1,1,1)
-                                       , glm::vec3(0,0,0),
-                                       model)){
-            glFrontFace(GL_CCW);
-            floorShader.Use();
-            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-            sceneObjects.getPhysics()->getDynamicsWorld()->debugDrawWorld();
+        //Mostramos el resto de elementos segun la escala definida por nuestro mundo
+        if (sceneObjects.getPhysics()->getDebug() > 0){
+             if (sceneObjects.getWorldModel(0, glm::vec3(1,1,1)
+                                           , glm::vec3(0,0,0),
+                                           model)){
+                glFrontFace(GL_CCW);
+                floorShader.Use();
+                glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+                sceneObjects.getPhysics()->getDynamicsWorld()->debugDrawWorld();
+            }
         }
+
         /**SALIDA DE DEBUG*/
 
 

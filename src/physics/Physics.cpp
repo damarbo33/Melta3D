@@ -1,6 +1,7 @@
 #include "Physics.h"
 
-Physics::Physics(){
+Physics::Physics(int debug){
+    setDebug(debug);
     initObjects();
 }
 
@@ -19,6 +20,8 @@ void Physics::initObjects() {
 	solver = new btSequentialImpulseConstraintSolver();
 	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
-	CibtDebugDraw *debuger = new CibtDebugDraw();
-	dynamicsWorld->setDebugDrawer(debuger);
+    if (getDebug() > 0){
+        CibtDebugDraw *debuger = new CibtDebugDraw();
+        dynamicsWorld->setDebugDrawer(debuger);
+    }
 }

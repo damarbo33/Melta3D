@@ -3,8 +3,7 @@
 SceneObjects::SceneObjects()
 {
     this->stencil = false;
-
-    physicsEngine = new Physics();
+    physicsEngine = new Physics(0);
     physicsEngine->getDynamicsWorld()->setGravity(btVector3(0, -9.8f, 0));
 }
 

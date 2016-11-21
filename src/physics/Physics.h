@@ -13,7 +13,7 @@ using namespace std;
 
 class Physics{
     public:
-        Physics();
+        Physics(int debug);
         ~Physics();
         void initObjects();
 
@@ -43,6 +43,9 @@ class Physics{
             bool isContact(){return contact;}
         };
 
+        void setDebug(int debug){this->debug = debug;}
+        int getDebug(){return this->debug;}
+
     protected:
         btDefaultCollisionConfiguration* collisionConfiguration;
         btCollisionDispatcher* dispatcher;
@@ -51,5 +54,7 @@ class Physics{
         btDiscreteDynamicsWorld* dynamicsWorld;
         std::vector<btCollisionShape *> collisionShapes;
         std::map<std::string, btRigidBody *> physicsAccessors;
+
+        int debug;
 
 };
