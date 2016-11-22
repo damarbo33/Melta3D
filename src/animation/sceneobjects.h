@@ -36,13 +36,14 @@ class object3D2{
         object3D2(){
             stencil = false;
             spinningFriction = 1.0f;
-            velocity = 1.5f;
+            velocity = 2.0f;
             instantStop = true;
             mass = 0.0f;
             convex = true;
             scaling = btVector3(1,1,1);
             groundContact = false;
             shape = NULL;
+            aproxHullShape = true;
         }
 
         bool stencil;
@@ -59,10 +60,12 @@ class object3D2{
         bool groundContact;
         //Scaling for the object
         btVector3 scaling;
+        //To aproximate the hull shape and reduce the number of poligons
+        bool aproxHullShape;
 
         btCollisionShape* shape;
 
-        btCollisionShape* createShapeWithVertices(Model *ourModel, bool convex, btVector3 scaling);
+        btCollisionShape* createShapeWithVertices(Model *ourModel);
 
     private:
 
@@ -91,7 +94,7 @@ class SceneObjects
         bool stencil;
         vector <object3D *> listObjects;
         int initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling);
-        bool getOMWorld(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
+        bool getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
         bool getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
         object3D2 *getObjPointer(int i);
 

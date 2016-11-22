@@ -3,7 +3,7 @@
 SceneObjects::SceneObjects()
 {
     this->stencil = false;
-    physicsEngine = new Physics(0);
+    physicsEngine = new Physics(1);
     physicsEngine->getDynamicsWorld()->setGravity(btVector3(0, -9.8f, 0));
 }
 
@@ -25,46 +25,37 @@ object3D2 *SceneObjects::getObjPointer(int i){
 /**
 *
 */
-btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel, bool convex, btVector3 scaling){
+btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
     //1
     if (convex){
+
+        btConvexHullShape* originalConvexShape = new btConvexHullShape();;
         //2
-        this->shape = new btConvexHullShape();
         for (int idMesh=0; idMesh < ourModel->getMeshes()->size(); idMesh++){
-
             vector<Vertex> *vertices = ourModel->getMeshes()->at(idMesh)->getVertices();
-//            vector<GLuint> *indices  = ourModel->getMeshes()->at(idMesh)->getIndices();
-//
-//            int index_count = indices->size();
-//
-//            if (index_count > 0){
-//                for (int i=0; i < index_count; i++){
-//                    const Vertex vec1 = vertices->at(indices->at(i));
-//                    _this->shape->addPoint(btVector3(vec1.Position[0], vec1.Position[1], vec1.Position[2]));
-//                }
-//            } else {
-                for (int i = 0; i < vertices->size(); i+=4){
-                    const Vertex v = vertices->at(i);
-                    ((btConvexHullShape*)this->shape)->addPoint(btVector3(v.Position[0], v.Position[1], v.Position[2]));
-                }
-//            }
-
-
+            for (int i = 0; i < vertices->size(); i+=4){
+                const Vertex v = vertices->at(i);
+                originalConvexShape->addPoint(btVector3(v.Position[0], v.Position[1], v.Position[2]));
+            }
         }
+
+        if (aproxHullShape){
+            //create a hull approximation
+            btShapeHull* hull = new btShapeHull(originalConvexShape);
+            btScalar margin = originalConvexShape->getMargin();
+            hull->buildHull(margin);
+            this->shape = new btConvexHullShape(hull->getVertexPointer()->m_floats, hull->numVertices());
+            delete hull;
+            delete originalConvexShape;
+        } else {
+            this->shape = originalConvexShape;
+        }
+
+        //Scaling the shape
         this->shape->setLocalScaling(scaling);
         return this->shape;
 
-//        ((btConvexHullShape*)_this->shape)->setLocalScaling(scaling);
-//        //create a hull approximation
-//        btShapeHull* hull = new btShapeHull(((btConvexHullShape*)_this->shape));
-//        btScalar margin = _this->shape->getMargin();
-//        hull->buildHull(margin);
-//        btConvexHullShape* simplifiedConvexShape = new btConvexHullShape(hull->getVertexPointer(),hull->numVertices());
-//        delete _this->shape;
-//        return simplifiedConvexShape;
-    }
-    else
-    {
+    } else {
         //3
         /**ATTENTION: We are using a static-triangle mesh this->shape,
         *  it can only be used for fixed/non-moving objects
@@ -194,11 +185,17 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel, bool conve
         }
 
         cout << "Added " << cFace << " faces"<< endl;
-
         cout << "mesh with " << ourModel->physMesh->getNumTriangles() << " triangles" << endl;
         if (ourModel->physMesh->getNumTriangles() > 0){
             this->shape = new btBvhTriangleMeshShape(ourModel->physMesh, true);
             this->shape->setLocalScaling(scaling);
+//            btTransform t;
+//            t.setIdentity();
+//            capsuleBody->getMotionState()->getWorldTransform(t);
+//            btVector3 aabb_min, aabb_max;
+//            this->shape->getAabb(t,aabb_min, aabb_max);
+//
+//            cout << "Bounding box: " << aabb_min.x() << "," << aabb_min.y() << "," << aabb_min.z() << "," << endl;
 //        } else if (triangleIndex != NULL && triangleIndex->getNumSubParts() > 0){
 //            _this->shape = new btBvhTriangleMeshShape(triangleIndex, true);
 //            _this->shape->setLocalScaling(scaling);
@@ -218,12 +215,18 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel, bool conve
 *
 */
 int SceneObjects::initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling){
-
     btCollisionShape *newRigidShape = NULL;
+
     object3D2 *obj = new object3D2();
+    obj->spinningFriction = 10.0f;
+    obj->tag = "model";
+    obj->instantStop = true;
+    obj->convex = true;
+    obj->scaling = scaling;
+
 
     if (ourModel != NULL){
-        newRigidShape = obj->createShapeWithVertices(ourModel, true, scaling);
+        newRigidShape = obj->createShapeWithVertices(ourModel);
     } else {
         //create the new shape, and tell the physics that is a Box
         newRigidShape = new btCylinderShape(btVector3(0.3f, 1.0f, 0.3f));
@@ -239,7 +242,6 @@ int SceneObjects::initShape(btVector3 initialPosition, Model *ourModel, btVector
     //set the mass of the object. a mass of "0" means that it is an immovable object
     btScalar mass = 0.1f;
     btVector3 localInertia(0,0,0);
-    //btVector3 localInertia(1.0f, 1.0f, 1.0f);
 
     startTransform.setOrigin(initialPosition);
     newRigidShape->calculateLocalInertia(mass, localInertia);
@@ -249,14 +251,7 @@ int SceneObjects::initShape(btVector3 initialPosition, Model *ourModel, btVector
 
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, newRigidShape, localInertia);
     btRigidBody *body = new btRigidBody(rbInfo);
-
-    obj->spinningFriction = 10.0f;
-    obj->tag = "model";
-    obj->instantStop = false;
-    obj->scaling = scaling;
-
     body->setUserPointer(obj);
-
     body->setRollingFriction(0.1f);
     body->setFriction(0.1f);
 
@@ -273,7 +268,7 @@ int SceneObjects::initShape(btVector3 initialPosition, Model *ourModel, btVector
 /**
 *
 */
-bool SceneObjects::getOMWorld(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model){
+bool SceneObjects::getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model){
     btCollisionObject* obj = getPhysics()->getDynamicsWorld()->getCollisionObjectArray()[i];
     btRigidBody* body = btRigidBody::upcast(obj);
     bool out = false;
@@ -290,7 +285,6 @@ bool SceneObjects::getOMWorld(int i, glm::vec3 scale, glm::vec3 offset,  glm::ma
                     + offset.x, trans.getOrigin().getY() + offset.y, trans.getOrigin().getZ() + offset.z));
             model = glm::scale(model, glm::vec3(scale.x, scale.y, scale.z));	// Para el piloto mesh
             model =  model * RotationMatrix;
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             out = true;
         }
     }
@@ -312,15 +306,10 @@ bool SceneObjects::getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm:
             btQuaternion orientation = trans.getRotation();
             glm::quat MyQuaternion   = glm::quat(orientation.getW(),orientation.getX(), orientation.getY(), orientation.getZ());
             glm::mat4 RotationMatrix = glm::toMat4(MyQuaternion);
-//            cout << "origX: " << trans.getOrigin().getX() << endl;
-//            cout << "origY: " << trans.getOrigin().getY() << endl;
-//            cout << "origZ: " << trans.getOrigin().getZ() << endl;
-
             model = glm::translate(model, glm::vec3(trans.getOrigin().getX()
                     + offset.x, trans.getOrigin().getY() + offset.y, trans.getOrigin().getZ() + offset.z));
-            model = glm::scale(model, glm::vec3(scale.x, scale.y, scale.z));	// Para el mundo
+            model = glm::scale(model, glm::vec3(scale.x, scale.y, scale.z));
             model =  model * RotationMatrix;
-            //model = glm::rotate(model, glm::radians(-180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             out = true;
         }
     }
