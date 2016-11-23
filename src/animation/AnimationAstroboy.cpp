@@ -39,8 +39,7 @@ void Do_Movement();
 void processLights(vector<Light *> &luces, Shader &shader);
 void initLights(vector<Light *> &luces, Shader &shader);
 void activateObjectOutlining();
-int initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling);
-int initGround(btVector3 initialPosition, btVector3 dimension, Model *ourModel, btVector3 scaling);
+int initGround(btVector3 initialPosition, Model *ourModel, btVector3 dimension);
 GLuint loadTexture(GLchar* path);
 bool getOMWorld(int i, glm::vec3 scale, glm::vec3 offset, glm::mat4 &model);
 
@@ -218,7 +217,6 @@ int main(int argc, char *argv[]){
     //Model ourModel("models/earth/earth.obj");
     //Model ourModel("models/Moon_3D_Model/moon.obj");
     //Model ourModel("models/OldHouse2/Old House 2 3D Models.obj");
-    //
     //Model *ourModel = new Model("models/guard/boblampclean.md5mesh",&shader, 3, true);
     //Model ourModel("models/Sonic/Sonic.obj");
     //Model ourModel("models/Alien_Warrior/Alien_Warrior.dae");
@@ -241,18 +239,17 @@ int main(int argc, char *argv[]){
     glCullFace(GL_FRONT);
     glFrontFace(GL_CW);
 
-    Model *ourWorld2 = new Model();
-    int tam = (sizeof(planeVertices) / sizeof(planeVertices[0])) / 5;
-    int i=0;
-    Mesh *mesh = new Mesh();
-    while (i < tam){
-        Vertex *vert= new Vertex();
-        //cout << planeVertices[i*5] << "," << planeVertices[i*5 + 1] << "," << planeVertices[i*5 + 2] << endl;
-        vert->Position = glm::vec3(planeVertices[i*5], planeVertices[i*5 + 1], planeVertices[i*5 + 2]);
-        mesh->vertices.push_back(*vert);
-        i++;
-    }
-    ourWorld2->meshes.push_back(mesh);
+//    Model *ourWorld2 = new Model();
+//    int tam = (sizeof(planeVertices) / sizeof(planeVertices[0])) / 5;
+//    int i=0;
+//    Mesh *mesh = new Mesh();
+//    while (i < tam){
+//        Vertex *vert= new Vertex();
+//        vert->Position = glm::vec3(planeVertices[i*5], planeVertices[i*5 + 1], planeVertices[i*5 + 2]);
+//        mesh->vertices.push_back(*vert);
+//        i++;
+//    }
+//    ourWorld2->meshes.push_back(mesh);
 
 
 //    Model *ourModel = new Model();
@@ -268,22 +265,18 @@ int main(int argc, char *argv[]){
 //    }
 //    ourModel->meshes.push_back(mesh2);
 
-
-//    initGround(btVector3(0,0,0), ourWorld, btVector3(0.05f, 0.05f, 0.05f));
-    initGround(btVector3(0,-2600,0), btVector3(0,0,0), ourWorld, btVector3(0.01, 0.01,0.01));
-    //initGround(btVector3(0,0,0), btVector3(5.0f,0,5.0f), ourWorld, btVector3(1,1,1));
-    //initGround(btVector3(0,-4,0), btVector3(5.0f,0,5.0f), ourWorld2, btVector3(1,1,1));
+    //We generate a world of 70m of height, regardless the model size
+    initGround(btVector3(30,-50,0), ourWorld, btVector3(0.0f, 70.0f, 0.0f));
+//    initGround(btVector3(0,0,0), ourWorld2, btVector3(10,0,0));
 
     int inicio = 0;
 
     //sceneObjects.activateStencil(true);
     for (int i=0; i < 2; i++){
+        //We generate an object of 1.8m of height
         sceneObjects.initShape(btVector3(i*2 % 20+1, 0, i*2 / 20+1),
                   ourModel,
-                  btVector3(0.003f, 0.003f, 0.003f));
-                  //btVector3(1, 1, 1));
-//                  btVector3(0.0012f, 0.0012f, 0.0012f));
-//        initShape(btVector3(0, i*3+50, 0));
+                  btVector3(0.0f, 1.8f, 0.0f));
     }
 
     double lastTime = 0;
@@ -343,7 +336,7 @@ int main(int argc, char *argv[]){
         sceneObjects.getPhysics()->getDynamicsWorld()->stepSimulation(deltaTime); //suppose you have 60 frames per second
 
         for (int i = 0; i< sceneObjects.getPhysics()->getCollisionObjectCount(); i++) {
-            object3D2 *userPointer = sceneObjects.getObjPointer(i);
+            object3D *userPointer = sceneObjects.getObjPointer(i);
             if (userPointer->tag.compare("model") == 0) {
                 model = glm::mat4();
                 if (sceneObjects.getObjectModel(i,
@@ -363,11 +356,11 @@ int main(int argc, char *argv[]){
         /**Fin modelo*/
 
 //        model = glm::mat4();
-//        object3D2 *userPointer = sceneObjects.getObjPointer(0);
+//        object3D *userPointer = sceneObjects.getObjPointer(0);
 //        /**Un piso de ejemplo*/
-//        if (sceneObjects.getWorldModel(0, glm::vec3(userPointer->scaling.x(), userPointer->scaling.y(), userPointer->scaling.z())
-//                                       , glm::vec3(0,0,0),
-//                                       model)){
+//        if (sceneObjects.getWorldModel(0,
+//                                       glm::vec3(userPointer->scaling.x(), userPointer->scaling.y(), userPointer->scaling.z()),
+//                                       glm::vec3(0.0f, 0.0f, 0.0f), model)){
 //            glFrontFace(GL_CCW);
 //            floorShader.Use();
 //            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -386,10 +379,10 @@ int main(int argc, char *argv[]){
 //            glBindVertexArray(0);
 //        }
 //        /**Fin piso de ejemplo*/
-//        glFrontFace(GL_CW);
+        glFrontFace(GL_CW);
 
         /**Para el escenario*/
-        object3D2 *userPointer = sceneObjects.getObjPointer(0);
+        object3D *userPointer = sceneObjects.getObjPointer(0);
         if (userPointer->tag.compare("ground") == 0) {
             model = glm::mat4();
             if (sceneObjects.getWorldModel(0,
@@ -409,12 +402,13 @@ int main(int argc, char *argv[]){
 
         //floorShader.Use();
         model = glm::mat4();
-        //object3D2 *userPointer2 = sceneObjects.getObjPointer(0);
+        object3D *userPointer2 = sceneObjects.getObjPointer(0);
         /**SALIDA DE DEBUG*/
         //Mostramos el resto de elementos segun la escala definida por nuestro mundo
         if (sceneObjects.getPhysics()->getDebug() > 0){
              if (sceneObjects.getWorldModel(0, glm::vec3(1,1,1)
-                                           , glm::vec3(0,0,0),
+                                           , -glm::vec3(userPointer2->position.x(), userPointer2->position.y(),
+                                                        userPointer2->position.z()),
                                            model)){
 
                 floorShader.Use();
@@ -424,24 +418,24 @@ int main(int argc, char *argv[]){
                 sceneObjects.getPhysics()->getDynamicsWorld()->debugDrawWorld();
             }
         }
-
         /**SALIDA DE DEBUG*/
-//        glFrontFace(GL_CCW);        // Also draw the lamp object, again binding the appropriate shader
-//        lampShader.Use();
-        // Set matrices
-//        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-//        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        // We now draw as many light bulbs as we have point lights.
-//        glBindVertexArray(lightVAO);
-//        for (GLuint i = 0; i < 2; i++){
-//            model = glm::mat4();
-//            model = glm::translate(model, luces.at(i+1)->vPosition);
-//            model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
-//            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-//            glm::mat4 transInversMatrix = transpose(inverse(model));
-//            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
-//            glDrawArrays(GL_TRIANGLES, 0, 36);
-//        }
+
+        glFrontFace(GL_CCW);        // Also draw the lamp object, again binding the appropriate shader
+        lampShader.Use();
+//         Set matrices
+        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+//         We now draw as many light bulbs as we have point lights.
+        glBindVertexArray(lightVAO);
+        for (GLuint i = 0; i < 1; i++){
+            model = glm::mat4();
+            model = glm::translate(model, luces.at(i+1)->vPosition);
+            model = glm::scale(model, glm::vec3(1.0f)); // Make it a smaller cube
+            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glm::mat4 transInversMatrix = transpose(inverse(model));
+            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
 //        for (int i = 1; i< physicsEngine->getCollisionObjectCount(); i++) {
 //            model = glm::mat4();
@@ -458,13 +452,11 @@ int main(int argc, char *argv[]){
         glfwSwapBuffers(window);
     }
 
-//    delete ourWorld;
+    delete ourWorld;
     delete ourModel;
     glfwTerminate();
     return 0;
 }
-
-#pragma region "User input"
 
 void activateObjectOutlining(){
     glEnable(GL_STENCIL_TEST);
@@ -516,13 +508,63 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 }
 
 /**
+*
+*/
+int initGround(btVector3 initialPosition, Model *ourModel, btVector3 dimension){
+
+    float groundDeep = 0;
+    //create the plane entity to the physics engine, and attach it to the node
+    btTransform groundTransform;
+    groundTransform.setIdentity();
+
+    btScalar groundMass(0.); //the mass is 0, because the ground is immovable (static)
+    btVector3 localGroundInertia(0, 0, 0);
+
+    object3D *worldShape = new object3D();
+    worldShape->convex = false;
+    worldShape->tag = "ground";
+    worldShape->dimension = dimension;
+    worldShape->position = initialPosition;
+
+    btCollisionShape *groundShape;
+    //groundShape = new btBoxShape(btVector3(500,1,500));
+    //groundShape = new btStaticPlaneShape(btVector3(0, 20.0f, 0), 1);
+    groundShape = worldShape->createShapeWithVertices(ourModel);
+
+    groundTransform.setOrigin(initialPosition);
+//    groundTransform.setOrigin(btVector3(initialPosition.x() * worldShape->scaling.x(),
+//                                        initialPosition.y() * worldShape->scaling.y(),
+//                                        initialPosition.z() * worldShape->scaling.z()));
+
+    if (groundShape != NULL){
+        btDefaultMotionState *groundMotionState = new btDefaultMotionState(groundTransform);
+        groundShape->calculateLocalInertia(groundMass, localGroundInertia);
+        btRigidBody::btRigidBodyConstructionInfo groundRBInfo(groundMass, groundMotionState, groundShape, localGroundInertia);
+        btRigidBody *groundBody = new btRigidBody(groundRBInfo);
+        groundBody->setFriction(btScalar(10.0));
+        groundBody->setRollingFriction(btScalar(10.0));
+        groundBody->setSpinningFriction(btScalar(1.0));
+        groundBody->setRestitution(0.0);
+        //add the body to the dynamics world
+        groundBody->setUserPointer(worldShape);
+        sceneObjects.getPhysics()->getDynamicsWorld()->addRigidBody(groundBody);
+        return 0;
+    } else {
+        cout << "Error initGround" << endl;
+        return 1;
+    }
+
+}
+
+
+/**
 * Inicia los valores de las luces
 */
 void initLights(vector<Light *> &luces, Shader &shader){
 
     // Positions of the point lights
     glm::vec3 pointLightPositions[] = {
-        glm::vec3( 0.0f, 1.0f, 1.0f),
+        glm::vec3( 0.0f, 0.5f, 1.0f),
         glm::vec3( 0.0f, 0.0f, 0.0f)
     };
 
@@ -641,55 +683,6 @@ void processLights(vector<Light *> &luces, Shader &shader){
     }
 }
 
-/**
-*
-*/
-int initGround(btVector3 initialPosition, btVector3 dimension, Model *ourModel, btVector3 scaling){
-
-    float groundDeep = 0;
-    //create the plane entity to the physics engine, and attach it to the node
-    btTransform groundTransform;
-    groundTransform.setIdentity();
-    //groundTransform.setOrigin(initialPosition);
-    groundTransform.setOrigin(btVector3(initialPosition.x() * scaling.x(),
-                                        initialPosition.y() * scaling.y(),
-                                        initialPosition.z() * scaling.z()));
-
-//    float RotationAngle = glm::radians(180.0f);
-//    groundTransform.setRotation(btQuaternion(0,0,0,cos(RotationAngle / 2.0f)));
-
-    btScalar groundMass(0.); //the mass is 0, because the ground is immovable (static)
-    btVector3 localGroundInertia(0, 0, 0);
-
-    object3D2 *worldShape = new object3D2();
-    worldShape->convex = false;
-    worldShape->tag = "ground";
-    worldShape->scaling = scaling;
-
-    btCollisionShape *groundShape;
-    //groundShape = new btBoxShape(btVector3(500,1,500));
-    //groundShape = new btStaticPlaneShape(btVector3(0, 20.0f, 0), 1);
-    groundShape = worldShape->createShapeWithVertices(ourModel);
-
-    if (groundShape != NULL){
-        btDefaultMotionState *groundMotionState = new btDefaultMotionState(groundTransform);
-        groundShape->calculateLocalInertia(groundMass, localGroundInertia);
-        btRigidBody::btRigidBodyConstructionInfo groundRBInfo(groundMass, groundMotionState, groundShape, localGroundInertia);
-        btRigidBody *groundBody = new btRigidBody(groundRBInfo);
-        groundBody->setFriction(btScalar(10.0));
-        groundBody->setRollingFriction(btScalar(10.0));
-        groundBody->setSpinningFriction(btScalar(1.0));
-        groundBody->setRestitution(0.0);
-        //add the body to the dynamics world
-        groundBody->setUserPointer(worldShape);
-        sceneObjects.getPhysics()->getDynamicsWorld()->addRigidBody(groundBody);
-        return 0;
-    } else {
-        cout << "Error initGround" << endl;
-        return 1;
-    }
-
-}
 
 /**
 * Moves/alters the camera positions based on user input
@@ -714,7 +707,7 @@ void Do_Movement()
     if (capsuleBody && capsuleBody->getMotionState()){
         btTransform trans;
         capsuleBody->getMotionState()->getWorldTransform(trans);
-        object3D2 *userPointer = (object3D2 *)capsuleBody->getUserPointer();
+        object3D *userPointer = (object3D *)capsuleBody->getUserPointer();
 
         if (userPointer->tag.compare("model") == 0) {
             btVector3 impulseAxis = capsuleBody->getWorldTransform().getBasis().getColumn(0);
@@ -760,7 +753,7 @@ void Do_Movement()
 //                btTransform newTrans = capsuleBody->getWorldTransform();
 //                newTrans.getOrigin() += (btVector3(0.01f, 0, 0.01f));
 //                capsuleBody->setWorldTransform(newTrans);
-//                btVector3 impulseAxis = ((object3D2 *)userPointer)->impulseAxis;
+//                btVector3 impulseAxis = ((object3D *)userPointer)->impulseAxis;
             }
 
             if (keys[GLFW_KEY_RIGHT] || keys[GLFW_KEY_LEFT]){
@@ -820,5 +813,3 @@ GLuint loadTexture(GLchar* path)
     return textureID;
 
 }
-
-#pragma endregion

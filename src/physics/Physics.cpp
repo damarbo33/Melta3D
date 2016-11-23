@@ -6,11 +6,11 @@ Physics::Physics(int debug){
 }
 
 Physics::~Physics(){
-    delete collisionConfiguration;
-    delete dispatcher;
-    delete overlappingPairCache;
-    delete solver;
     delete dynamicsWorld;
+    delete solver;
+    delete overlappingPairCache;
+    delete dispatcher;
+    delete collisionConfiguration;
 }
 
 void Physics::initObjects() {

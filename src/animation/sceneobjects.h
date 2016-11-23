@@ -17,23 +17,16 @@
 
 using namespace std;
 
-class object3D : public btRigidBody{
+enum {
+    APROXNONE,
+    APROXHULL,
+    APROXCYCLINDER
+} eAproxHull;
+
+class object3D{
 
     public:
-        object3D(btRigidBody::btRigidBodyConstructionInfo rbInfo)
-            : btRigidBody(rbInfo){
-            stencil = false;
-        }
-        bool stencil;
-
-    private:
-
-};
-
-class object3D2{
-
-    public:
-        object3D2(){
+        object3D(){
             stencil = false;
             spinningFriction = 1.0f;
             velocity = 2.0f;
@@ -43,7 +36,9 @@ class object3D2{
             scaling = btVector3(1,1,1);
             groundContact = false;
             shape = NULL;
-            aproxHullShape = true;
+            aproxHullShape = APROXHULL;
+            position = btVector3(0,0,0);
+            dimension = btVector3(1,1,1);
         }
 
         bool stencil;
@@ -61,13 +56,20 @@ class object3D2{
         //Scaling for the object
         btVector3 scaling;
         //To aproximate the hull shape and reduce the number of poligons
-        bool aproxHullShape;
+        int aproxHullShape;
+
+        //Dimension of the object
+        btVector3 dimension;
+
+        btVector3 position;
 
         btCollisionShape* shape;
 
         btCollisionShape* createShapeWithVertices(Model *ourModel);
+        btVector3 scaleToMeters(btVector3 &scaleMeters, btVector3 &aabb);
 
     private:
+        void addPhysMeshTriangle(Model *ourModel, btVector3* triMeshPhis, Vertex &vec1, Vertex &vec2, Vertex &vec3);
 
 };
 
@@ -93,10 +95,10 @@ class SceneObjects
 
         bool stencil;
         vector <object3D *> listObjects;
-        int initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling);
+        int initShape(btVector3 initialPosition, Model *ourModel, btVector3 dimension);
         bool getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
         bool getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
-        object3D2 *getObjPointer(int i);
+        object3D *getObjPointer(int i);
 
         Physics * getPhysics(){
             return physicsEngine;

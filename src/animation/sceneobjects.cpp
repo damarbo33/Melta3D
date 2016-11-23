@@ -9,27 +9,26 @@ SceneObjects::SceneObjects()
 
 SceneObjects::~SceneObjects()
 {
-    //dtor
+    delete physicsEngine;
 }
 
 /**
 *
 */
-object3D2 *SceneObjects::getObjPointer(int i){
+object3D *SceneObjects::getObjPointer(int i){
     btCollisionObject* obj = getPhysics()->getDynamicsWorld()->getCollisionObjectArray()[i];
     btRigidBody* capsuleBody = btRigidBody::upcast(obj);
-    return (object3D2 *)capsuleBody->getUserPointer();
+    return (object3D *)capsuleBody->getUserPointer();
 }
 
 
 /**
 *
 */
-btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
+btCollisionShape* object3D::createShapeWithVertices(Model *ourModel){
     //1
     if (convex){
-
-        btConvexHullShape* originalConvexShape = new btConvexHullShape();;
+        btConvexHullShape* originalConvexShape = new btConvexHullShape();
         //2
         for (int idMesh=0; idMesh < ourModel->getMeshes()->size(); idMesh++){
             vector<Vertex> *vertices = ourModel->getMeshes()->at(idMesh)->getVertices();
@@ -39,7 +38,7 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
             }
         }
 
-        if (aproxHullShape){
+        if (aproxHullShape == APROXHULL){
             //create a hull approximation
             btShapeHull* hull = new btShapeHull(originalConvexShape);
             btScalar margin = originalConvexShape->getMargin();
@@ -47,14 +46,17 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
             this->shape = new btConvexHullShape(hull->getVertexPointer()->m_floats, hull->numVertices());
             delete hull;
             delete originalConvexShape;
+        } else if (aproxHullShape == APROXCYCLINDER){
+            btTransform t;
+            t.setIdentity();
+            btVector3 aabmin, aabmax;
+            originalConvexShape->getAabb(t, aabmin, aabmax);
+            //cout << aabmax.x() << "," << aabmax.y() << "," << aabmax.z() << endl;
+            shape = new btCylinderShape(aabmax);
+            delete originalConvexShape;
         } else {
             this->shape = originalConvexShape;
         }
-
-        //Scaling the shape
-        this->shape->setLocalScaling(scaling);
-        return this->shape;
-
     } else {
         //3
         /**ATTENTION: We are using a static-triangle mesh this->shape,
@@ -63,7 +65,6 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
         float maxX=0, minX=0, maxY=0, minY=0, maxZ=0, minZ=0;
         int nVertMeshes = 0;
         int nIndxMeshes = 0;
-        bool createdNew = false;
         bool indexed = false;
 
         //Calculamos en primer lugar el numero de vertices de todos los meshes
@@ -76,7 +77,7 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
             int nVertices = vertices->size();
 
             int verticesLeft =  nVertices % 3 == 0 ? 0 : 3 - nVertices % 3;
-            if (verticesLeft != 0 && nVertices > 0){
+            if (verticesLeft != 0 && nVertices > 0 && index_count == 0){
                 for (int i=0; i < verticesLeft; i++){
                     vertices->push_back(vertices->at(nVertices - 1));
                 }
@@ -88,96 +89,35 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
 
         indexed = nIndxMeshes != 0;
         unsigned int totalFaces = indexed ? nIndxMeshes / 3 : nVertMeshes / 3;
+        int cFace = 0;
 
         //Reservamos espacio para el modelo que no tiene
         if (ourModel->triMeshPhis == NULL){
-            ourModel->triMeshPhis = new btVector3*[totalFaces];
-            createdNew = true;
-        }
+            cout << "Reservando espacio para las fisicas del modelo: " << this->tag << endl;
+            ourModel->initTriMeshPhis(totalFaces);
 
-        int cFace = 0;
+            for (int idMesh=0; idMesh < ourModel->getMeshes()->size(); idMesh++){
+                vector<Vertex> *vertices = ourModel->getMeshes()->at(idMesh)->getVertices();
+                vector<GLuint> *indices  = ourModel->getMeshes()->at(idMesh)->getIndices();
+                int index_count = indices->size();
 
-        for (int idMesh=0; idMesh < ourModel->getMeshes()->size(); idMesh++){
-            vector<Vertex> *vertices = ourModel->getMeshes()->at(idMesh)->getVertices();
-            vector<GLuint> *indices  = ourModel->getMeshes()->at(idMesh)->getIndices();
-            int index_count = indices->size();
-
-            if (!indexed){
-                if (createdNew){
+                if (!indexed){
                     unsigned int nFaces = vertices->size()/3;
                     for (int i=0; i < nFaces; i++){
-                        ourModel->triMeshPhis[cFace] = new btVector3[3];
-                        const Vertex vec1 = vertices->at(i*3);
-                        ourModel->triMeshPhis[cFace][0].setX(btScalar(vec1.Position.x));
-                        ourModel->triMeshPhis[cFace][0].setY(btScalar(vec1.Position.y));
-                        ourModel->triMeshPhis[cFace][0].setZ(btScalar(vec1.Position.z));
-                        const Vertex vec2 = vertices->at(i*3+1);
-                        ourModel->triMeshPhis[cFace][1].setX(btScalar(vec2.Position.x));
-                        ourModel->triMeshPhis[cFace][1].setY(btScalar(vec2.Position.y));
-                        ourModel->triMeshPhis[cFace][1].setZ(btScalar(vec2.Position.z));
-                        const Vertex vec3 = vertices->at(i*3+2);
-                        ourModel->triMeshPhis[cFace][2].setX(btScalar(vec3.Position.x));
-                        ourModel->triMeshPhis[cFace][2].setY(btScalar(vec3.Position.y));
-                        ourModel->triMeshPhis[cFace][2].setZ(btScalar(vec3.Position.z));
+                        addPhysMeshTriangle(ourModel,
+                                            ourModel->triMeshPhis[cFace],
+                                            vertices->at(i*3), vertices->at(i*3+1),
+                                            vertices->at(i*3+2));
 
-                        ourModel->physMesh->addTriangle(ourModel->triMeshPhis[cFace][0],
-                                                    ourModel->triMeshPhis[cFace][1],
-                                                    ourModel->triMeshPhis[cFace][2], false); // false, don’t remove duplicate vertices
                         cFace++;
                     }
-//                    if (idMesh == 0 && i == 0){
-//                        maxX = v1.Position[0];
-//                        minX = v1.Position[0];
-//                        maxY = v1.Position[1];
-//                        minY = v1.Position[1];
-//                        maxZ = v1.Position[2];
-//                        minZ = v1.Position[2];
-//                    }
-
-//                    if (v1.Position[0] > maxX) maxX = v1.Position[0];
-//                    if (v2.Position[0] > maxX) maxX = v2.Position[0];
-//                    if (v3.Position[0] > maxX) maxX = v3.Position[0];
-//                    if (v1.Position[0] < minX) minX = v1.Position[0];
-//                    if (v2.Position[0] < minX) minX = v2.Position[0];
-//                    if (v3.Position[0] < minX) minX = v3.Position[0];
-//
-//                    if (v1.Position[1] > maxY) maxY = v1.Position[1];
-//                    if (v2.Position[1] > maxY) maxY = v2.Position[1];
-//                    if (v3.Position[1] > maxY) maxY = v3.Position[1];
-//                    if (v1.Position[1] < minY) minY = v1.Position[1];
-//                    if (v2.Position[1] < minY) minY = v2.Position[1];
-//                    if (v3.Position[1] < minY) minY = v3.Position[1];
-//
-//                    if (v1.Position[2] > maxZ) maxZ = v1.Position[2];
-//                    if (v2.Position[2] > maxZ) maxZ = v2.Position[2];
-//                    if (v3.Position[2] > maxZ) maxZ = v3.Position[2];
-//                    if (v1.Position[2] < minZ) minZ = v1.Position[2];
-//                    if (v2.Position[2] < minZ) minZ = v2.Position[2];
-//                    if (v3.Position[2] < minZ) minZ = v3.Position[2];
-
-//                    ourModel->physMesh->addTriangle(bv1, bv2, bv3,false); // false, don’t remove duplicate vertices
-                }
-            } else {
-                if (createdNew){
+                } else {
                     unsigned int nFaces = index_count/3;
                     for (int i=0; i < nFaces; i++){
-                        ourModel->triMeshPhis[cFace] = new btVector3[3];
-                        const Vertex vec1 = vertices->at(indices->at(i*3));
-                        ourModel->triMeshPhis[cFace][0].setX(btScalar(vec1.Position.x));
-                        ourModel->triMeshPhis[cFace][0].setY(btScalar(vec1.Position.y));
-                        ourModel->triMeshPhis[cFace][0].setZ(btScalar(vec1.Position.z));
-                        const Vertex vec2 = vertices->at(indices->at(i*3+1));
-                        ourModel->triMeshPhis[cFace][1].setX(btScalar(vec2.Position.x));
-                        ourModel->triMeshPhis[cFace][1].setY(btScalar(vec2.Position.y));
-                        ourModel->triMeshPhis[cFace][1].setZ(btScalar(vec2.Position.z));
-                        const Vertex vec3 = vertices->at(indices->at(i*3+2));
-                        ourModel->triMeshPhis[cFace][2].setX(btScalar(vec3.Position.x));
-                        ourModel->triMeshPhis[cFace][2].setY(btScalar(vec3.Position.y));
-                        ourModel->triMeshPhis[cFace][2].setZ(btScalar(vec3.Position.z));
-
-                        ourModel->physMesh->addTriangle(ourModel->triMeshPhis[cFace][0],
-                                                    ourModel->triMeshPhis[cFace][1],
-                                                    ourModel->triMeshPhis[cFace][2], false); // false, don’t remove duplicate vertices
+                        addPhysMeshTriangle(ourModel,
+                                            ourModel->triMeshPhis[cFace],
+                                            vertices->at(indices->at(i*3)), vertices->at(indices->at(i*3+1)),
+                                            vertices->at(indices->at(i*3+2)));
                         cFace++;
                     }
                 }
@@ -188,50 +128,82 @@ btCollisionShape* object3D2::createShapeWithVertices(Model *ourModel){
         cout << "mesh with " << ourModel->physMesh->getNumTriangles() << " triangles" << endl;
         if (ourModel->physMesh->getNumTriangles() > 0){
             this->shape = new btBvhTriangleMeshShape(ourModel->physMesh, true);
-            this->shape->setLocalScaling(scaling);
-//            btTransform t;
-//            t.setIdentity();
-//            capsuleBody->getMotionState()->getWorldTransform(t);
-//            btVector3 aabb_min, aabb_max;
-//            this->shape->getAabb(t,aabb_min, aabb_max);
-//
-//            cout << "Bounding box: " << aabb_min.x() << "," << aabb_min.y() << "," << aabb_min.z() << "," << endl;
-//        } else if (triangleIndex != NULL && triangleIndex->getNumSubParts() > 0){
-//            _this->shape = new btBvhTriangleMeshShape(triangleIndex, true);
-//            _this->shape->setLocalScaling(scaling);
         } else {
             cout << "createShapeWithVertices: Shape without indices" << endl;
         }
-
-        cout << "maxX: " << maxX << " minX: " << minX <<
-        "maxY: " << maxY << " minY: " << minY <<
-        "maxZ: " << maxZ << " minZ: " << minZ << endl;
-
-        return this->shape;
     }
+
+    if (this->shape != NULL){
+        btTransform t;
+        t.setIdentity();
+        btVector3 aabb_min, aabb_max;
+        this->shape->getAabb(t,aabb_min, aabb_max);
+        cout << this->tag <<". Bounding box original. x=" << aabb_max.x() << ", y=" << aabb_max.y() << ", z=" << aabb_max.z() << "," << endl;
+        scaling = scaleToMeters(dimension, aabb_max);
+        this->shape->setLocalScaling(scaling);
+        this->shape->getAabb(t,aabb_min, aabb_max);
+        cout << this->tag <<". Bounding box scaled. x=" << aabb_max.x() << ", y=" << aabb_max.y() << ", z=" << aabb_max.z() << "," << endl;
+    }
+
+
+    return this->shape;
+}
+
+/**
+* Genera un vector de escalado teniendo en cuenta los limites especificados.
+* Solo puede especificarse un eje en el que escalar. El resto se escalara
+* en proporcion al escalado de este
+*/
+btVector3 object3D::scaleToMeters(btVector3 &scaleMeters, btVector3 &aabb){
+    float relation = 0.0f;
+
+    if (scaleMeters.x() > 0.0f && aabb.x() != 0.0f)
+        relation = scaleMeters.x() / aabb.x();
+
+    if (scaleMeters.y() > 0.0f && aabb.y() != 0.0f)
+        relation = scaleMeters.y() / aabb.y();
+
+    if (scaleMeters.z() > 0.0f && aabb.z() != 0.0f)
+        relation = scaleMeters.z() / aabb.z();
+
+//    cout << "relation: " << relation << endl;
+    return btVector3(btScalar(relation), btScalar(relation), btScalar(relation));
+}
+
+void object3D::addPhysMeshTriangle(Model *ourModel, btVector3* triMeshPhis, Vertex &vec1, Vertex &vec2, Vertex &vec3){
+    triMeshPhis = new btVector3[3];
+    triMeshPhis[0].setX(btScalar(vec1.Position.x));
+    triMeshPhis[0].setY(btScalar(vec1.Position.y));
+    triMeshPhis[0].setZ(btScalar(vec1.Position.z));
+    triMeshPhis[1].setX(btScalar(vec2.Position.x));
+    triMeshPhis[1].setY(btScalar(vec2.Position.y));
+    triMeshPhis[1].setZ(btScalar(vec2.Position.z));
+    triMeshPhis[2].setX(btScalar(vec3.Position.x));
+    triMeshPhis[2].setY(btScalar(vec3.Position.y));
+    triMeshPhis[2].setZ(btScalar(vec3.Position.z));
+
+    ourModel->physMesh->addTriangle(triMeshPhis[0],
+                                    triMeshPhis[1],
+                                    triMeshPhis[2], false); // false, don’t remove duplicate vertices
+
 }
 
 /**
 *
 */
-int SceneObjects::initShape(btVector3 initialPosition, Model *ourModel, btVector3 scaling){
+int SceneObjects::initShape(btVector3 initialPosition, Model *ourModel, btVector3 dimension){
     btCollisionShape *newRigidShape = NULL;
 
-    object3D2 *obj = new object3D2();
+    object3D *obj = new object3D();
     obj->spinningFriction = 10.0f;
     obj->tag = "model";
     obj->instantStop = true;
     obj->convex = true;
-    obj->scaling = scaling;
+    obj->dimension = dimension;
+    obj->aproxHullShape = APROXHULL;
+    obj->position = initialPosition;
 
-
-    if (ourModel != NULL){
-        newRigidShape = obj->createShapeWithVertices(ourModel);
-    } else {
-        //create the new shape, and tell the physics that is a Box
-        newRigidShape = new btCylinderShape(btVector3(0.3f, 1.0f, 0.3f));
-    }
-
+    newRigidShape = obj->createShapeWithVertices(ourModel);
     physicsEngine->getCollisionShapes()->push_back(newRigidShape);
 
     //set the initial position and transform. For this demo, we set the tranform to be none
@@ -283,7 +255,7 @@ bool SceneObjects::getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm
             glm::mat4 RotationMatrix = glm::toMat4(MyQuaternion);
             model = glm::translate(model, glm::vec3(trans.getOrigin().getX()
                     + offset.x, trans.getOrigin().getY() + offset.y, trans.getOrigin().getZ() + offset.z));
-            model = glm::scale(model, glm::vec3(scale.x, scale.y, scale.z));	// Para el piloto mesh
+            model = glm::scale(model, scale);	// Para el piloto mesh
             model =  model * RotationMatrix;
             out = true;
         }
@@ -292,6 +264,9 @@ bool SceneObjects::getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm
     return out;
 }
 
+/**
+*
+*/
 bool SceneObjects::getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model){
     btCollisionObject* obj = getPhysics()->getDynamicsWorld()->getCollisionObjectArray()[i];
     btRigidBody* body = btRigidBody::upcast(obj);
@@ -308,7 +283,7 @@ bool SceneObjects::getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm:
             glm::mat4 RotationMatrix = glm::toMat4(MyQuaternion);
             model = glm::translate(model, glm::vec3(trans.getOrigin().getX()
                     + offset.x, trans.getOrigin().getY() + offset.y, trans.getOrigin().getZ() + offset.z));
-            model = glm::scale(model, glm::vec3(scale.x, scale.y, scale.z));
+            model = glm::scale(model, scale);
             model =  model * RotationMatrix;
             out = true;
         }

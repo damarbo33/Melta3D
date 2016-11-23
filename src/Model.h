@@ -59,6 +59,7 @@ public:
         this->bonesTransform = NULL;
         this->triMeshPhis = NULL;
         this->physMesh = new btTriangleMesh();
+        this->mNumPhysFaces = 0;
     }
     /**
     *Constructor, expects a filepath to a 3D model.
@@ -69,7 +70,7 @@ public:
         this->bonesTransform = NULL;
         this->triMeshPhis = NULL;
         this->physMesh = new btTriangleMesh();
-
+        this->mNumPhysFaces = 0;
         this->importer = new Assimp::Importer();
         this->fpsModelFactor = fpsModelFactor;
         this->precalculateBonesTransform = precalculateBonesTransform;
@@ -85,6 +86,7 @@ public:
         cleanMeshes();
         cleanTextures();
         cleanScene();
+        cleanPhysics();
     }
 
     /**
@@ -192,12 +194,24 @@ public:
     vector<Mesh *>* getMeshes(){
         return &meshes;
     }
+
     /*  Model Data  */
     vector<Mesh *> meshes;
 
     btVector3** getTriMeshPhis(){return triMeshPhis;}
+
     btVector3** triMeshPhis;
     btTriangleMesh* physMesh;
+
+    /**
+    *
+    */
+    void initTriMeshPhis(int len){
+        this->triMeshPhis = new btVector3* [len];
+        mNumPhysFaces = len;
+    }
+
+
 
 private:
 
@@ -219,6 +233,8 @@ private:
     const aiScene* mp_scene;
     Assimp::Importer* importer;
     bool precalculateBonesTransform;
+
+    int mNumPhysFaces;
 
 
 
@@ -314,6 +330,16 @@ private:
         //Transform.Print();
         //glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, glm::value_ptr(Transform));
         glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, (const GLfloat*)Transform);
+    }
+
+    void cleanPhysics(){
+//        for (int i=0; i < mNumPhysFaces; i++){
+//            delete triMeshPhis[i];
+//        }
+        delete triMeshPhis;
+        triMeshPhis = NULL;
+
+        delete physMesh;
     }
 
     /**
