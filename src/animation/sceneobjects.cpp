@@ -3,13 +3,17 @@
 SceneObjects::SceneObjects()
 {
     this->stencil = false;
-    physicsEngine = new Physics(1);
+    physicsEngine = new Physics(0);
     physicsEngine->getDynamicsWorld()->setGravity(btVector3(0, -9.8f, 0));
 }
 
 SceneObjects::~SceneObjects()
 {
     delete physicsEngine;
+
+    for (int i=0; i < listObjects.size(); i++){
+        delete listObjects.at(i);
+    }
 }
 
 /**
@@ -22,6 +26,10 @@ object3D *SceneObjects::getObjPointer(int i){
 }
 
 
+object3D::~object3D(){
+
+}
+
 /**
 *
 */
@@ -32,7 +40,7 @@ btCollisionShape* object3D::createShapeWithVertices(Model *ourModel){
         //2
         for (int idMesh=0; idMesh < ourModel->getMeshes()->size(); idMesh++){
             vector<Vertex> *vertices = ourModel->getMeshes()->at(idMesh)->getVertices();
-            for (int i = 0; i < vertices->size(); i+=4){
+            for (int i = 0; i < vertices->size(); i += 1){
                 const Vertex v = vertices->at(i);
                 originalConvexShape->addPoint(btVector3(v.Position[0], v.Position[1], v.Position[2]));
             }
@@ -50,9 +58,10 @@ btCollisionShape* object3D::createShapeWithVertices(Model *ourModel){
             btTransform t;
             t.setIdentity();
             btVector3 aabmin, aabmax;
+            //t.setOrigin(initialPosition);
             originalConvexShape->getAabb(t, aabmin, aabmax);
             //cout << aabmax.x() << "," << aabmax.y() << "," << aabmax.z() << endl;
-            shape = new btCylinderShape(aabmax);
+            shape = new btCylinderShape(aabmax*0.5);
             delete originalConvexShape;
         } else {
             this->shape = originalConvexShape;
@@ -144,8 +153,6 @@ btCollisionShape* object3D::createShapeWithVertices(Model *ourModel){
         this->shape->getAabb(t,aabb_min, aabb_max);
         cout << this->tag <<". Bounding box scaled. x=" << aabb_max.x() << ", y=" << aabb_max.y() << ", z=" << aabb_max.z() << "," << endl;
     }
-
-
     return this->shape;
 }
 
@@ -166,10 +173,12 @@ btVector3 object3D::scaleToMeters(btVector3 &scaleMeters, btVector3 &aabb){
     if (scaleMeters.z() > 0.0f && aabb.z() != 0.0f)
         relation = scaleMeters.z() / aabb.z();
 
-//    cout << "relation: " << relation << endl;
-    return btVector3(btScalar(relation), btScalar(relation), btScalar(relation));
+    return btVector3(relation, relation, relation);
 }
 
+/**
+*
+*/
 void object3D::addPhysMeshTriangle(Model *ourModel, btVector3* triMeshPhis, Vertex &vec1, Vertex &vec2, Vertex &vec3){
     triMeshPhis = new btVector3[3];
     triMeshPhis[0].setX(btScalar(vec1.Position.x));
@@ -191,48 +200,40 @@ void object3D::addPhysMeshTriangle(Model *ourModel, btVector3* triMeshPhis, Vert
 /**
 *
 */
-int SceneObjects::initShape(btVector3 initialPosition, Model *ourModel, btVector3 dimension){
-    btCollisionShape *newRigidShape = NULL;
-
-    object3D *obj = new object3D();
-    obj->spinningFriction = 10.0f;
-    obj->tag = "model";
-    obj->instantStop = true;
-    obj->convex = true;
-    obj->dimension = dimension;
-    obj->aproxHullShape = APROXHULL;
-    obj->position = initialPosition;
-
-    newRigidShape = obj->createShapeWithVertices(ourModel);
+int SceneObjects::initShape(object3D *obj){
+    btCollisionShape *newRigidShape = obj->createShapeWithVertices(obj->meshModel);
     physicsEngine->getCollisionShapes()->push_back(newRigidShape);
 
     //set the initial position and transform. For this demo, we set the tranform to be none
     btTransform startTransform;
     startTransform.setIdentity();
-    startTransform.setRotation(btQuaternion(0,0,0,1));
 
-    //set the mass of the object. a mass of "0" means that it is an immovable object
-    btScalar mass = 0.1f;
+    btQuaternion quat = btQuaternion(obj->rotation.x, obj->rotation.y, obj->rotation.z, obj->rotation.w);
+    startTransform.setOrigin(obj->position);
+    startTransform.setRotation(quat);
+
     btVector3 localInertia(0,0,0);
-
-    startTransform.setOrigin(initialPosition);
-    newRigidShape->calculateLocalInertia(mass, localInertia);
+    newRigidShape->calculateLocalInertia(obj->mass, localInertia);
 
     //actually contruct the body and add it to the dynamics world
     btDefaultMotionState *myMotionState = new btDefaultMotionState(startTransform);
 
-    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, newRigidShape, localInertia);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(obj->mass, myMotionState, newRigidShape, localInertia);
     btRigidBody *body = new btRigidBody(rbInfo);
+
+    body->setCenterOfMassTransform(startTransform);
+    body->setRollingFriction(obj->rollingFriction);
+    body->setFriction(obj->friction);
+    body->setRestitution(obj->restitution);
     body->setUserPointer(obj);
-    body->setRollingFriction(0.1f);
-    body->setFriction(0.1f);
 
     //restricting movement in planes
     body->setLinearFactor(btVector3(1,1,1));
+    //Para que el objecto este siempre recto
     body->setAngularFactor(btVector3(0,0,0));
-
+    //Para que no se desactiven los elementos
     body->setActivationState(DISABLE_DEACTIVATION);
-
+    //Incluimos el cuerpo en la libreria de fisica
     physicsEngine->getDynamicsWorld()->addRigidBody(body);
     //physicsEngine->trackRigidBodyWithName(body, physicsCubeName);
 }
@@ -256,34 +257,6 @@ bool SceneObjects::getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm
             model = glm::translate(model, glm::vec3(trans.getOrigin().getX()
                     + offset.x, trans.getOrigin().getY() + offset.y, trans.getOrigin().getZ() + offset.z));
             model = glm::scale(model, scale);	// Para el piloto mesh
-            model =  model * RotationMatrix;
-            out = true;
-        }
-    }
-
-    return out;
-}
-
-/**
-*
-*/
-bool SceneObjects::getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model){
-    btCollisionObject* obj = getPhysics()->getDynamicsWorld()->getCollisionObjectArray()[i];
-    btRigidBody* body = btRigidBody::upcast(obj);
-
-    bool out = false;
-    if (body && body->getMotionState()){
-        btTransform trans;
-        body->getMotionState()->getWorldTransform(trans);
-
-        void *userPointer = body->getUserPointer();
-        if (userPointer) {
-            btQuaternion orientation = trans.getRotation();
-            glm::quat MyQuaternion   = glm::quat(orientation.getW(),orientation.getX(), orientation.getY(), orientation.getZ());
-            glm::mat4 RotationMatrix = glm::toMat4(MyQuaternion);
-            model = glm::translate(model, glm::vec3(trans.getOrigin().getX()
-                    + offset.x, trans.getOrigin().getY() + offset.y, trans.getOrigin().getZ() + offset.z));
-            model = glm::scale(model, scale);
             model =  model * RotationMatrix;
             out = true;
         }

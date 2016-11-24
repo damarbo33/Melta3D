@@ -23,15 +23,32 @@ enum {
     APROXCYCLINDER
 } eAproxHull;
 
+enum {
+    IMPULSEX=0,
+    IMPULSEY,
+    IMPULSEZ
+}eImpulseAxis;
+
+enum {
+    IMPULSEPOS  = 1,
+    IMPULSEZERO = 0,
+    IMPULSENEG  = -1
+}eImpulseSense;
+
 class object3D{
 
     public:
         object3D(){
             stencil = false;
             spinningFriction = 1.0f;
+            mass = 0.1f;
+            friction = 0.1f;
+            rollingFriction = 0.1f;
+            restitution = 0.1f;
+
             velocity = 2.0f;
             instantStop = true;
-            mass = 0.0f;
+
             convex = true;
             scaling = btVector3(1,1,1);
             groundContact = false;
@@ -39,13 +56,27 @@ class object3D{
             aproxHullShape = APROXHULL;
             position = btVector3(0,0,0);
             dimension = btVector3(1,1,1);
+            rotation = glm::quat(0,0,0,0);
+            meshModel = NULL;
+            impulseSense = IMPULSEPOS;
+            impulseAxis = IMPULSEZ;
+            rotationSense = IMPULSEPOS;
         }
 
+        virtual ~object3D();
+
+        //flag to highlight the object
         bool stencil;
+        //Name to identify object
         string tag;
         float spinningFriction;
+        //Velocity of the object
         float velocity;
+        //set the mass of the object. a mass of "0" means that it is an immovable object
         float mass;
+        float friction;
+        float rollingFriction;
+        float restitution;
         //Specify if the object is concave or convex. Always convex=true is better for performance
         bool convex;
         //This makes some calcules that implies some overhead to reset the forces
@@ -57,19 +88,28 @@ class object3D{
         btVector3 scaling;
         //To aproximate the hull shape and reduce the number of poligons
         int aproxHullShape;
-
         //Dimension of the object
         btVector3 dimension;
-
+        //Initial position of the object
         btVector3 position;
-
-        btCollisionShape* shape;
+        //Rotation of object
+        glm::quat rotation;
+        //Mesh of the object
+        Model *meshModel;
+        //Sense of the vector
+        int impulseSense;
+        //Axis of the reference object for impulse
+        int impulseAxis;
+        //Sense of the rotation
+        int rotationSense;
 
         btCollisionShape* createShapeWithVertices(Model *ourModel);
         btVector3 scaleToMeters(btVector3 &scaleMeters, btVector3 &aabb);
 
     private:
         void addPhysMeshTriangle(Model *ourModel, btVector3* triMeshPhis, Vertex &vec1, Vertex &vec2, Vertex &vec3);
+        btCollisionShape* shape;
+
 
 };
 
@@ -95,9 +135,10 @@ class SceneObjects
 
         bool stencil;
         vector <object3D *> listObjects;
-        int initShape(btVector3 initialPosition, Model *ourModel, btVector3 dimension);
+
+        int initShape(object3D *obj);
         bool getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
-        bool getWorldModel(int i, glm::vec3 scale, glm::vec3 offset,  glm::mat4 &model);
+
         object3D *getObjPointer(int i);
 
         Physics * getPhysics(){
