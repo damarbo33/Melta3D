@@ -141,7 +141,7 @@ int main(int argc, char *argv[]){
     obj->restitution = 0.0f;
     obj->mass = 0.0f;
     obj->dimension = btVector3(0.0f, 70.0f, 0.0f);
-    obj->position = btVector3(30,-48,0);
+    obj->position = btVector3(30,-50,0);
     obj->rotation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.f, 1.f, 0.f)); //Rotacion de 90 grados en el eje y
     obj->meshModel = ourWorld;
     obj->tag = "ground";
@@ -150,6 +150,7 @@ int main(int argc, char *argv[]){
     //Creating the object pilot
     for (int i=0; i < 1; i++){
         object3D *obj = new object3D();
+        obj->aproxHullShape = APROXCYCLINDER;
         obj->spinningFriction = 10.0f;
         obj->dimension = btVector3(0.0, 1.8, 0.0);
         obj->position = btVector3(i*2 % 20+1, 0, i*2 / 20+3);
@@ -161,6 +162,7 @@ int main(int argc, char *argv[]){
 
     //Another model
     object3D *obj2 = new object3D();
+//    obj2->aproxHullShape = APROXCYCLINDER;
     obj2->spinningFriction = 10.0f;
     obj2->dimension = btVector3(0.0, 0.0, 1.8); // El modelo viene tumbado
     obj2->position = btVector3(5,0,5);

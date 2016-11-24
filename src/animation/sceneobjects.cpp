@@ -3,7 +3,7 @@
 SceneObjects::SceneObjects()
 {
     this->stencil = false;
-    physicsEngine = new Physics(0);
+    physicsEngine = new Physics(1);
     physicsEngine->getDynamicsWorld()->setGravity(btVector3(0, -9.8f, 0));
 }
 
@@ -58,11 +58,26 @@ btCollisionShape* object3D::createShapeWithVertices(Model *ourModel){
             btTransform t;
             t.setIdentity();
             btVector3 aabmin, aabmax;
-            //t.setOrigin(initialPosition);
             originalConvexShape->getAabb(t, aabmin, aabmax);
-            //cout << aabmax.x() << "," << aabmax.y() << "," << aabmax.z() << endl;
-            shape = new btCylinderShape(aabmax*0.5);
+
+            btTransform localTransform;
+            localTransform.setIdentity();
+
+            /**ATTENTION: ONLY VALID WHEN THE OBJECT HAVE NO ROTATIONS IN X OR Z AXIS*/
+            int radius = (aabmax.x() * 0.5 + aabmax.z() * 0.5) * 0.5 ;
+            int height = aabmax.y() * 0.5;
+            localTransform.setOrigin(btVector3(position.x(), position.y() + height, position.z()));
+            /**ATTENTION: ONLY VALID WHEN THE OBJECT HAVE NO ROTATIONS IN X OR Z AXIS*/
+//            int radius = (aabmax.y() * 0.5 + aabmax.z() * 0.5) * 0.5 ;
+//            int height = aabmax.x();
+
+            shape = new btCompoundShape();
+            btCylinderShape *shapeCyl = new btCylinderShape(btVector3(radius,height,radius));
+            ((btCompoundShape*)shape)->addChildShape(localTransform,shapeCyl);
+
             delete originalConvexShape;
+//            delete shapeCyl;
+
         } else {
             this->shape = originalConvexShape;
         }
