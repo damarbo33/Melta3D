@@ -58,6 +58,7 @@ public:
         this->mp_scene = NULL;
         this->bonesTransform = NULL;
         this->triMeshPhis = NULL;
+        this->collisionShape = NULL;
         this->physMesh = new btTriangleMesh();
         this->mNumPhysFaces = 0;
     }
@@ -69,6 +70,7 @@ public:
         this->mp_scene = NULL;
         this->bonesTransform = NULL;
         this->triMeshPhis = NULL;
+        this->collisionShape = NULL;
         this->physMesh = new btTriangleMesh();
         this->mNumPhysFaces = 0;
         this->importer = new Assimp::Importer();
@@ -211,7 +213,7 @@ public:
         mNumPhysFaces = len;
     }
 
-
+    btCollisionShape* getCollisionShape(){return collisionShape;}
 
 private:
 
@@ -236,6 +238,7 @@ private:
 
     int mNumPhysFaces;
 
+    btCollisionShape* collisionShape;
 
 
 

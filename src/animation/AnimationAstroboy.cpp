@@ -28,6 +28,9 @@
 
 #include "../lights/light.h"
 #include "objectutils.h"
+#include "physics/mydebug.h"
+
+
 
 // Properties
 GLuint screenWidth = 640, screenHeight = 480;
@@ -98,18 +101,12 @@ int main(int argc, char *argv[]){
 
     // Setup and compile our shaders
     Shader shader("shaders/animation/model.vertexshader", "shaders/animation/model.fragmentshader");
-
     Shader lampShader("shaders/multiplelights/lamp.vertexshader", "shaders/multiplelights/lamp.fragmentshader");
+    Shader debugShader("shaders/animation/debug.vertexshader", "shaders/animation/debug.fragmentshader");
 
-    Shader floorShader("shaders/animation/floor.vertexshader", "shaders/animation/floor.fragmentshader");
-
+    ObjectUtils objUtil;
     GLuint VBO, lightVAO;
-    makeSquareVao(VBO, lightVAO);
-
-    GLuint planeVAO, planeVBO;
-    makeGroundVAO(planeVAO, planeVBO);
-
-    GLuint floorTexture = loadTexture("res/wall.jpg");
+    objUtil.makeSquareVao(VBO, lightVAO);
 
     shader.Use();   // <-- Don't forget this one!
     // Load models
@@ -130,7 +127,8 @@ int main(int argc, char *argv[]){
     //To generate a plane ground
 //    Model *ourWorld = new Model();
 //    object3D *obj = new object3D();
-//    generatePlaneGround(ourWorld, obj);
+//    obj->dimension = btVector3(10.0f, 0.0f, 0.0f);
+//    objUtil.generatePlaneGround(ourWorld, obj);
 //    sceneObjects.initShape(obj);
 
     object3D *obj = new object3D();
@@ -147,17 +145,20 @@ int main(int argc, char *argv[]){
     obj->tag = "ground";
     sceneObjects.initShape(obj);
 
+
+    object3D *objM = new object3D();
+    objM->aproxHullShape = APROXCYCLINDER;
+    objM->spinningFriction = 10.0f;
+    objM->dimension = btVector3(0.0, 1.8, 0.0);
+    //obj->position = btVector3(i*2 % 20+1, 0, i*2 / 20+3);
+    objM->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0.f, 1.f, 0.f)); //Rotacion de 90 grados en el eje y
+    objM->meshModel = ourModel;
+    objM->tag = "model_pilot";
+
     //Creating the object pilot
-    for (int i=0; i < 1; i++){
-        object3D *obj = new object3D();
-        obj->aproxHullShape = APROXCYCLINDER;
-        obj->spinningFriction = 10.0f;
-        obj->dimension = btVector3(0.0, 1.8, 0.0);
-        obj->position = btVector3(i*2 % 20+1, 0, i*2 / 20+3);
-        obj->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0.f, 1.f, 0.f)); //Rotacion de 90 grados en el eje y
-        obj->meshModel = ourModel;
-        obj->tag = "model_pilot";
-        sceneObjects.initShape(obj);
+    for (int i=0; i < 100; i++){
+        objM->position = btVector3(2, 1.8 * i, 2);
+        sceneObjects.initShape(objM);
     }
 
     //Another model
@@ -181,6 +182,8 @@ int main(int argc, char *argv[]){
     GLint personLoc = glGetUniformLocation(shader.Program, "model");
     GLfloat initTime = glfwGetTime();
 
+    glm::vec3 cielo = glm::vec3(119.0f, 181.0f, 254.0f)/255.0f;
+
     // Game loop
     while(!glfwWindowShouldClose(window)){
         // Set frame time
@@ -201,8 +204,9 @@ int main(int argc, char *argv[]){
         Do_Movement();
 
         // Clear the colorbuffer
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(cielo.x, cielo.y, cielo.z, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         shader.Use();   // <-- Don't forget this one!
         glFrontFace(GL_CW);
         //Camera positions
@@ -243,49 +247,24 @@ int main(int argc, char *argv[]){
 		}
         /**Fin modelo*/
 
-
-//        /**Un piso de ejemplo*/
-//        model = glm::mat4();
-//        object3D *userPointer = sceneObjects.getObjPointer(0);
-//        if (sceneObjects.getObjectModel(0,
-//                                       glm::vec3(userPointer->scaling.x(), userPointer->scaling.y(), userPointer->scaling.z()),
-//                                       glm::vec3(0.0f, 0.0f, 0.0f), model)){
-//            glFrontFace(GL_CCW);
-//            floorShader.Use();
-//            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-//            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-//            glBindVertexArray(planeVAO);
-//            glBindTexture(GL_TEXTURE_2D, floorTexture);
-//            // Set our texture parameters
-//            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//            // Set texture filtering
-//            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//            // Load, create texture and generate mipmaps
-//            glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-//            glDrawArrays(GL_TRIANGLES, 0, 6);
-//            glBindVertexArray(0);
-//        }
-//        /**Fin piso de ejemplo*/
-
+//        objUtil.drawPlane(sceneObjects, projection, view);
 
         /**SALIDA DE DEBUG*/
-
         glFrontFace(GL_CW);
         model = glm::mat4();
-        object3D *userPointer2 = sceneObjects.getObjPointer(0);
         //Mostramos el resto de elementos segun la escala definida por nuestro mundo
+        object3D *userPointer2 = sceneObjects.getObjPointer(0);
+
         if (sceneObjects.getPhysics()->getDebug() > 0){
              if (sceneObjects.getObjectModel(0, glm::vec3(1,1,1)
                                            , -glm::vec3(userPointer2->position.x(), userPointer2->position.y(),
                                                         userPointer2->position.z()),
                                            model)){
 
-                floorShader.Use();
-                glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-                glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-                glUniformMatrix4fv(glGetUniformLocation(floorShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+                debugShader.Use();
+                glUniformMatrix4fv(glGetUniformLocation(debugShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(glGetUniformLocation(debugShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniformMatrix4fv(glGetUniformLocation(debugShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
                 sceneObjects.getPhysics()->getDynamicsWorld()->debugDrawWorld();
             }
         }
@@ -614,27 +593,4 @@ void processLights(vector<Light *> &luces, Shader &shader){
 
 
 
-// This function loads a texture from file. Note: texture loading functions like these are usually
-// managed by a 'Resource Manager' that manages all resources (like textures, models, audio).
-// For learning purposes we'll just define it as a utility function.
-GLuint loadTexture(GLchar* path)
-{
-    //Generate texture ID and load texture data
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    int width,height;
-    unsigned char* image = SOIL_load_image(path, &width, &height, 0, SOIL_LOAD_RGB);
-    // Assign texture to ID
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    // Parameters
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    SOIL_free_image_data(image);
-    return textureID;
 
-}

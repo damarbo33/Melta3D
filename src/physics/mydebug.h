@@ -14,7 +14,9 @@ using namespace std;
 
 class CibtDebugDraw : public btIDebugDraw
 {
+protected:
     int m_debugMode;
+
 public:
     CibtDebugDraw();
     virtual ~CibtDebugDraw();

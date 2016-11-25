@@ -40,7 +40,7 @@ btCollisionShape* object3D::createShapeWithVertices(Model *ourModel){
         //2
         for (int idMesh=0; idMesh < ourModel->getMeshes()->size(); idMesh++){
             vector<Vertex> *vertices = ourModel->getMeshes()->at(idMesh)->getVertices();
-            for (int i = 0; i < vertices->size(); i += 1){
+            for (int i = 0; i < vertices->size(); i += 4){
                 const Vertex v = vertices->at(i);
                 originalConvexShape->addPoint(btVector3(v.Position[0], v.Position[1], v.Position[2]));
             }
