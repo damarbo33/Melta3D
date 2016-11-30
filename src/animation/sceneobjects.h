@@ -1,6 +1,10 @@
 #ifndef SCENEOBJECTS_H
 #define SCENEOBJECTS_H
 
+// GLEW
+#define GLEW_STATIC
+#include <GL/glew.h>
+
 #include "../Model.h"
 
 #include "btBulletDynamicsCommon.h"
@@ -11,6 +15,9 @@
 #include "../common/structs.h"
 #include "../physics/Physics.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -40,15 +47,15 @@ class object3D{
     public:
         object3D(){
             stencil = false;
+            stencilDepthTest = true;
+            stencilScale = 1.1f;
             spinningFriction = 1.0f;
             mass = 0.1f;
             friction = 0.1f;
             rollingFriction = 0.1f;
             restitution = 0.1f;
-
             velocity = 2.0f;
             instantStop = true;
-
             convex = true;
             scaling = btVector3(1,1,1);
             groundContact = false;
@@ -66,7 +73,9 @@ class object3D{
         virtual ~object3D();
 
         //flag to highlight the object
-        bool stencil;
+        bool  stencil;
+        float stencilScale;
+        bool  stencilDepthTest;
         //Name to identify object
         string tag;
         float spinningFriction;
@@ -144,6 +153,10 @@ class SceneObjects
         Physics * getPhysics(){
             return physicsEngine;
         }
+
+        void createModelStencil(int i);
+        bool mustProcessStencil(int i, glm::mat4 &model, Shader &shader);
+        void cleanScreen();
 
 
     protected:

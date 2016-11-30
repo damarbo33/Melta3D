@@ -264,7 +264,7 @@ bool SceneObjects::getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm
         btTransform trans;
         body->getMotionState()->getWorldTransform(trans);
 
-        void *userPointer = body->getUserPointer();
+        object3D *userPointer = (object3D *)body->getUserPointer();
         if (userPointer) {
             btQuaternion orientation = trans.getRotation();
             glm::quat MyQuaternion   = glm::quat(orientation.getW(),orientation.getX(), orientation.getY(), orientation.getZ());
@@ -278,5 +278,67 @@ bool SceneObjects::getObjectModel(int i, glm::vec3 scale, glm::vec3 offset,  glm
     }
 
     return out;
+}
+
+/**
+*
+*/
+void SceneObjects::createModelStencil(int i){
+    object3D *userPointer = getObjPointer(i);
+    if (userPointer) {
+        //Stencil processing
+        if (this->stencil){
+            if (userPointer->stencil){
+                // 1st. Render pass, draw objects as normal, filling the stencil buffer
+                glStencilFunc(GL_ALWAYS, 1, 0xFF); // All fragments should update the stencil buffer
+                glStencilMask(0xFF); // Enable writing to the stencil buffer
+            } else {
+                glStencilMask(0x00); // Disable writing to the stencil buffer
+            }
+
+            if (userPointer->stencilDepthTest){
+                glEnable(GL_DEPTH_TEST);
+            }
+        }
+    }
+}
+
+/**
+*
+*/
+bool SceneObjects::mustProcessStencil(int i, glm::mat4 &model, Shader &shader){
+    object3D *userPointer = getObjPointer(i);
+    bool ret = false;
+    if (userPointer) {
+        //Stencil processing
+        if (this->stencil){
+            if (userPointer->stencil){
+                //Stencil
+                glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+                glStencilMask(0x00); // Disable writing to the stencil buffer
+                glDisable(GL_DEPTH_TEST);
+                shader.Use();
+                model = glm::scale(model, glm::vec3(userPointer->stencilScale, userPointer->stencilScale, userPointer->stencilScale));
+                glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+                //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
+                glm::mat4 transInversMatrix = transpose(inverse(model));
+                glUniformMatrix4fv(glGetUniformLocation(shader.Program, "transInversMatrix"),
+                                   1, GL_FALSE, glm::value_ptr(transInversMatrix));
+                ret = true;
+            }
+            glStencilMask(0xFF);
+        }
+    }
+    return ret;
+}
+
+/**
+*
+*/
+void SceneObjects::cleanScreen(){
+    GLbitfield opt = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+    if (this->stencil) opt |= GL_STENCIL_BUFFER_BIT;
+
+    glClear(opt);
 }
 

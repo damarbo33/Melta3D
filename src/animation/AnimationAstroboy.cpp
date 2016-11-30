@@ -48,7 +48,7 @@ GLuint loadTexture(GLchar* path);
 bool getOMWorld(int i, glm::vec3 scale, glm::vec3 offset, glm::mat4 &model);
 
 // Camera
-Camera camera(glm::vec3(0.0f, 1.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 1.0f, 8.0f));
 //Camera camera(glm::vec3(0.0f, 20.0f, 25.0f));
 
 bool keys[1024];
@@ -101,8 +101,10 @@ int main(int argc, char *argv[]){
 
     // Setup and compile our shaders
     Shader shader("shaders/animation/model.vertexshader", "shaders/animation/model.fragmentshader");
+    Shader shaderStencil("shaders/animation/model.vertexshader", "shaders/stencil/shaderSingleColor.fragmentshader");
     Shader lampShader("shaders/multiplelights/lamp.vertexshader", "shaders/multiplelights/lamp.fragmentshader");
     Shader debugShader("shaders/animation/debug.vertexshader", "shaders/animation/debug.fragmentshader");
+
 
     ObjectUtils objUtil;
     GLuint VBO, lightVAO;
@@ -110,19 +112,21 @@ int main(int argc, char *argv[]){
 
     shader.Use();   // <-- Don't forget this one!
     // Load models
-    Model *ourModel2 = new Model("models/Bikini_Girl/Bikini_Girl.dae", &shader, 1, true);
+
     Model *ourWorld = new Model("models/cs_assault/cs_assault.obj", &shader);
     Model *ourModel = new Model("models/ArmyPilot/ArmyPilot.ms3d", &shader, 1, true);
+    Model *ourModel2 = new Model("models/Bikini_Girl/Bikini_Girl.dae", &shader, 1, true);
 
     // Draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
-
     //Por temas de rendimiento. Solo pinta las caras visibles
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     glFrontFace(GL_CW);
 
+    //Stencil opts
+    sceneObjects.activateStencil(true);
 
     //To generate a plane ground
 //    Model *ourWorld = new Model();
@@ -146,24 +150,21 @@ int main(int argc, char *argv[]){
     sceneObjects.initShape(obj);
 
 
-    object3D *objM = new object3D();
-    objM->aproxHullShape = APROXCYCLINDER;
-    objM->spinningFriction = 10.0f;
-    objM->dimension = btVector3(0.0, 1.8, 0.0);
-    //obj->position = btVector3(i*2 % 20+1, 0, i*2 / 20+3);
-    objM->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0.f, 1.f, 0.f)); //Rotacion de 90 grados en el eje y
-    objM->meshModel = ourModel;
-    objM->tag = "model_pilot";
-
-    //Creating the object pilot
-    for (int i=0; i < 100; i++){
-        objM->position = btVector3(2, 1.8 * i, 2);
-        sceneObjects.initShape(objM);
+    for (int i=0; i < 1; i++){
+        object3D *obj = new object3D();
+        obj->aproxHullShape = APROXCYCLINDER;
+        obj->spinningFriction = 10.0f;
+        obj->dimension = btVector3(0.0, 1.8, 0.0);
+        obj->position = btVector3(i*2 % 20+1, 0, i*2 / 20+3);
+        obj->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0.f, 1.f, 0.f)); //Rotacion de 90 grados en el eje y
+        obj->meshModel = ourModel;
+        obj->tag = "model_pilot";
+        obj->stencil = true;
+        sceneObjects.initShape(obj);
     }
 
     //Another model
     object3D *obj2 = new object3D();
-//    obj2->aproxHullShape = APROXCYCLINDER;
     obj2->spinningFriction = 10.0f;
     obj2->dimension = btVector3(0.0, 0.0, 1.8); // El modelo viene tumbado
     obj2->position = btVector3(5,0,5);
@@ -171,6 +172,7 @@ int main(int argc, char *argv[]){
     obj2->rotation = obj2->rotation * glm::angleAxis(glm::radians(0.f), glm::vec3(0.f, 0.f, 1.f)); //Rotacion 90 grados en eje z
     obj2->meshModel = ourModel2;
     obj2->tag = "model_bikini";
+    obj2->stencil = false;
     sceneObjects.initShape(obj2);
 
     double lastTime = 0;
@@ -205,19 +207,27 @@ int main(int argc, char *argv[]){
 
         // Clear the colorbuffer
         glClearColor(cielo.x, cielo.y, cielo.z, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        sceneObjects.cleanScreen();
+
+
+        glm::mat4 projection = glm::perspective(camera.Zoom, (float)screenWidth/(float)screenHeight, 0.1f, 10000.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+
+        shaderStencil.Use();
+        glUniform3f(glGetUniformLocation(shaderStencil.Program, "viewPos"), camera.Position.x, camera.Position.y, camera.Position.z);
+        glUniformMatrix4fv(glGetUniformLocation(shaderStencil.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(shaderStencil.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
 
         shader.Use();   // <-- Don't forget this one!
         glFrontFace(GL_CW);
         //Camera positions
-        GLint viewPosLoc = glGetUniformLocation(shader.Program, "viewPos");
-        glUniform3f(viewPosLoc, camera.Position.x, camera.Position.y, camera.Position.z);
+        glUniform3f(glGetUniformLocation(shader.Program, "viewPos"), camera.Position.x, camera.Position.y, camera.Position.z);
         //Light processing
         processLights(luces, shader);
         // Transformation matrices
         GLint transInversLoc  = glGetUniformLocation(shader.Program,  "transInversMatrix");
-        glm::mat4 projection = glm::perspective(camera.Zoom, (float)screenWidth/(float)screenHeight, 0.1f, 10000.0f);
-        glm::mat4 view = camera.GetViewMatrix();
+
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
         // Draw the loaded model
@@ -231,20 +241,31 @@ int main(int argc, char *argv[]){
             object3D *userPointer = sceneObjects.getObjPointer(i);
             if (userPointer != NULL) {
                 model = glm::mat4();
+
+                //If necessary, create a stencil shape
+                sceneObjects.createModelStencil(i);
+
                 if (sceneObjects.getObjectModel(i,
                                glm::vec3(userPointer->scaling.x(), userPointer->scaling.y(), userPointer->scaling.z()),
                                glm::vec3(0.0f, 0.0f, 0.0f), model))
                 {
+                    shader.Use();
                     //Informing data of model
                     glUniformMatrix4fv(personLoc, 1, GL_FALSE, glm::value_ptr(model));
                     //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
                     transInversMatrix = transpose(inverse(model));
                     glUniformMatrix4fv(transInversLoc, 1, GL_FALSE, glm::value_ptr(transInversMatrix));
-                    //Drawing the model
-                    userPointer->meshModel->Draw(&shader, estadoPersonaje.x + fmod(currentFrame * 2.0f, estadoPersonaje.y));
+                    const GLfloat frameMillis = estadoPersonaje.x + fmod(currentFrame * 2.0f, estadoPersonaje.y);
+                    //Drawing the model with textures
+                    userPointer->meshModel->Draw(&shader, frameMillis);
+                    //Drawing the model for stencil
+                    if (sceneObjects.mustProcessStencil(i,model,shaderStencil)){
+                        userPointer->meshModel->Draw(&shaderStencil, frameMillis);
+                    }
                 }
             }
 		}
+
         /**Fin modelo*/
 
 //        objUtil.drawPlane(sceneObjects, projection, view);
