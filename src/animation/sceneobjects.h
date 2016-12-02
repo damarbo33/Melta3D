@@ -48,7 +48,8 @@ class object3D{
         object3D(){
             stencil = false;
             stencilDepthTest = true;
-            stencilScale = 1.1f;
+            stencilThroughWalls = false;
+            stencilScale = 1.05f;
             spinningFriction = 1.0f;
             mass = 0.1f;
             friction = 0.1f;
@@ -74,8 +75,12 @@ class object3D{
 
         //flag to highlight the object
         bool  stencil;
+        //Redimension of the object for the stencil shadow
         float stencilScale;
+        //Always should be set to true to draw objects with depth
         bool  stencilDepthTest;
+        //Highlight objects through the walls
+        bool  stencilThroughWalls;
         //Name to identify object
         string tag;
         float spinningFriction;
@@ -97,7 +102,9 @@ class object3D{
         btVector3 scaling;
         //To aproximate the hull shape and reduce the number of poligons
         int aproxHullShape;
-        //Dimension of the object
+
+        btVector3 scaledDimension;
+        //Dimension desired of the object
         btVector3 dimension;
         //Initial position of the object
         btVector3 position;
@@ -111,6 +118,7 @@ class object3D{
         int impulseAxis;
         //Sense of the rotation
         int rotationSense;
+
 
         btCollisionShape* createShapeWithVertices(Model *ourModel);
         btVector3 scaleToMeters(btVector3 &scaleMeters, btVector3 &aabb);

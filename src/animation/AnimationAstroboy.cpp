@@ -113,9 +113,10 @@ int main(int argc, char *argv[]){
     shader.Use();   // <-- Don't forget this one!
     // Load models
 
-    Model *ourWorld = new Model("models/cs_assault/cs_assault.obj", &shader);
+    //Model *ourWorld = new Model("models/cs_assault/cs_assault.obj", &shader);
     Model *ourModel = new Model("models/ArmyPilot/ArmyPilot.ms3d", &shader, 1, true);
     Model *ourModel2 = new Model("models/Bikini_Girl/Bikini_Girl.dae", &shader, 1, true);
+    Model *ourWorld = new Model("models/OldHouse2/Old House 2 3D Models.obj", &shader);
 
     // Draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -125,8 +126,12 @@ int main(int argc, char *argv[]){
     glCullFace(GL_FRONT);
     glFrontFace(GL_CW);
 
+    //Transparence
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     //Stencil opts
-    sceneObjects.activateStencil(true);
+    sceneObjects.activateStencil(false);
 
     //To generate a plane ground
 //    Model *ourWorld = new Model();
@@ -142,8 +147,10 @@ int main(int argc, char *argv[]){
     obj->spinningFriction = 1.0f;
     obj->restitution = 0.0f;
     obj->mass = 0.0f;
-    obj->dimension = btVector3(0.0f, 70.0f, 0.0f);
-    obj->position = btVector3(30,-50,0);
+//    obj->dimension = btVector3(0.0f, 70.0f, 0.0f);
+//    obj->position = btVector3(30,-50,0);
+    obj->dimension = btVector3(0.0f, 6.0f, 0.0f);
+    obj->position = btVector3(0,0,0);
     obj->rotation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.f, 1.f, 0.f)); //Rotacion de 90 grados en el eje y
     obj->meshModel = ourWorld;
     obj->tag = "ground";
@@ -155,7 +162,7 @@ int main(int argc, char *argv[]){
         obj->aproxHullShape = APROXCYCLINDER;
         obj->spinningFriction = 10.0f;
         obj->dimension = btVector3(0.0, 1.8, 0.0);
-        obj->position = btVector3(i*2 % 20+1, 0, i*2 / 20+3);
+        obj->position = btVector3(i*2 % 20+1, 5, i*2 / 20 - 1.5);
         obj->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0.f, 1.f, 0.f)); //Rotacion de 90 grados en el eje y
         obj->meshModel = ourModel;
         obj->tag = "model_pilot";
@@ -265,7 +272,6 @@ int main(int argc, char *argv[]){
                 }
             }
 		}
-
         /**Fin modelo*/
 
 //        objUtil.drawPlane(sceneObjects, projection, view);
@@ -291,22 +297,22 @@ int main(int argc, char *argv[]){
         }
         /**SALIDA DE DEBUG*/
 
-//        glFrontFace(GL_CCW);        // Also draw the lamp object, again binding the appropriate shader
-//        lampShader.Use();
-////         Set matrices
-//        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-//        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-////         We now draw as many light bulbs as we have point lights.
-//        glBindVertexArray(lightVAO);
-//        for (GLuint i = 0; i < 1; i++){
-//            model = glm::mat4();
-//            model = glm::translate(model, luces.at(i+1)->vPosition);
-//            model = glm::scale(model, glm::vec3(1.0f)); // Make it a smaller cube
-//            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-//            glm::mat4 transInversMatrix = transpose(inverse(model));
-//            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
-//            glDrawArrays(GL_TRIANGLES, 0, 36);
-//        }
+        glFrontFace(GL_CCW);        // Also draw the lamp object, again binding the appropriate shader
+        lampShader.Use();
+//         Set matrices
+        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+//         We now draw as many light bulbs as we have point lights.
+        glBindVertexArray(lightVAO);
+        for (GLuint i = 0; i < 1; i++){
+            model = glm::mat4();
+            model = glm::translate(model, luces.at(i+1)->vPosition);
+            model = glm::scale(model, glm::vec3(0.3f)); // Make it a smaller cube
+            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glm::mat4 transInversMatrix = transpose(inverse(model));
+            glUniformMatrix4fv(glGetUniformLocation(lampShader.Program,  "transInversMatrix"), 1, GL_FALSE, glm::value_ptr(transInversMatrix));
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
 //        for (int i = 1; i< physicsEngine->getCollisionObjectCount(); i++) {
 //            model = glm::mat4();
@@ -493,8 +499,8 @@ void initLights(vector<Light *> &luces, Shader &shader){
 
     // Positions of the point lights
     glm::vec3 pointLightPositions[] = {
-        glm::vec3( 0.0f, 0.5f, 1.0f),
-        glm::vec3( 0.0f, 0.0f, 0.0f)
+        glm::vec3( 0.0f, 6.0f, 0.0f),
+        glm::vec3( 0.0f, 6.0f, 1.0f)
     };
 
     glm::vec3 pointLightColors[] = {

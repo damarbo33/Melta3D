@@ -47,7 +47,7 @@ using namespace std;
 #include <iostream>
 using namespace std;
 
-GLint TextureFromFile(const char* path, string directory);
+GLint TextureFromFile(const char* path, string directory, GLboolean alpha);
 
 class Model
 {
@@ -574,15 +574,15 @@ private:
             // Normal: texture_normalN
 
             // 1. Diffuse maps
-            vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+            vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE);
             textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
             // 2. Specular maps
-            vector<Texture> specularMaps = this->loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+            vector<Texture> specularMaps = this->loadMaterialTextures(material, aiTextureType_SPECULAR);
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-
-//            vector<Texture> opacityMaps = this->loadMaterialTextures(material, aiTextureType_OPACITY, "texture_opacity");
-//            cout << "opacityMaps.size(): " <<opacityMaps.size() << endl;
-//            aiTextureType_OPACITY
+            // 3. Opacity maps
+            vector<Texture> opacityMaps = this->loadMaterialTextures(material, aiTextureType_OPACITY);
+            textures.insert(textures.end(), opacityMaps.begin(), opacityMaps.end());
+            //cout << "opacityMaps size: " << opacityMaps.size() << endl;
         }
 
         vector<VertexBoneData> Bones;
@@ -602,11 +602,11 @@ private:
 
         if (mesh->mNumBones > 0){
             Bones.resize(NumVertices);
-            cout << "mesh " << idMesh << " tiene " << mesh->mNumBones << " bones" <<endl;
+//            cout << "mesh " << idMesh << " tiene " << mesh->mNumBones << " bones" <<endl;
             for(GLuint j = 0; j < mesh->mNumBones; j++){
                 uint32_t BoneIndex = 0;
                 string BoneName(mesh->mBones[j]->mName.data);
-                cout << "BoneName: " << BoneName << endl;
+//                cout << "BoneName: " << BoneName << endl;
                 if (m_BoneMapping.find(BoneName) == m_BoneMapping.end()) {
                     // Allocate an index for a new bone
                     BoneIndex = m_NumBones;
@@ -634,7 +634,7 @@ private:
     * Checks all material textures of a given type and loads the textures if they're not loaded yet.
     * The required info is returned as a Texture struct.
     */
-    vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName)
+    vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type)
     {
         vector<Texture> textures;
         for(GLuint i = 0; i < mat->GetTextureCount(type); i++)
@@ -642,14 +642,38 @@ private:
             aiString str;
             mat->GetTexture(type, i, &str);
 
-            aiColor3D color (0.f,0.f,0.f);
-            mat->Get(AI_MATKEY_COLOR_TRANSPARENT ,color);
-
+            aiString nombre;
+            mat->Get(AI_MATKEY_NAME, nombre);
+            aiColor3D colorTrans (0.f,0.f,0.f);
+            mat->Get(AI_MATKEY_COLOR_TRANSPARENT, colorTrans);
+            aiColor3D colorAmbient (0.f,0.f,0.f);
+            mat->Get(AI_MATKEY_COLOR_AMBIENT, colorAmbient);
+            aiColor3D colorDiffuse (0.f,0.f,0.f);
+            mat->Get(AI_MATKEY_COLOR_DIFFUSE, colorDiffuse);
+            aiColor3D colorSpecular (0.f,0.f,0.f);
+            mat->Get(AI_MATKEY_COLOR_SPECULAR, colorSpecular);
+            aiColor3D colorEmissive (0.f,0.f,0.f);
+            mat->Get(AI_MATKEY_COLOR_EMISSIVE, colorEmissive);
+            float shineStrength = 0;
+            mat->Get(AI_MATKEY_SHININESS_STRENGTH, shineStrength);
+            float shininess = 0;
+            mat->Get(AI_MATKEY_SHININESS, shininess);
+            int blend = 0;
+            mat->Get(AI_MATKEY_BLEND_FUNC, blend);
             float opacity = 0;
             mat->Get(AI_MATKEY_OPACITY ,opacity);
-            if (opacity < 1.0f){
-                cout << color.r << "," << color.g << "," << color.b << endl;
-            }
+
+//            cout << " name: " << nombre.data;
+//            cout << " a: " << colorAmbient.r << "," << colorAmbient.g << "," << colorAmbient.b;
+//            cout << " d: " << colorDiffuse.r << "," << colorDiffuse.g << "," << colorDiffuse.b;
+//            cout << " s: " << colorSpecular.r << "," << colorSpecular.g << "," << colorSpecular.b;
+//            cout << " e: " << colorEmissive.r << "," << colorEmissive.g << "," << colorEmissive.b;
+//            cout << " shineStrength: " << shineStrength;
+//            cout << " shininess: " << shininess;
+//            cout << " opacity: " << opacity;
+//            cout << " blend: " << blend;
+//            cout << " trans: " << colorTrans.r << "," << colorTrans.g << "," << colorTrans.b << endl;
+//            cout << endl;
 
             // Check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
             GLboolean skip = false;
@@ -664,8 +688,8 @@ private:
             if(!skip)
             {   // If texture hasn't been loaded already, load it
                 Texture texture;
-                texture.id = TextureFromFile(str.C_Str(), this->directory);
-                texture.type = typeName;
+                texture.id = TextureFromFile(str.C_Str(), this->directory, true);
+                texture.type = type;
                 texture.path = str;
                 textures.push_back(texture);
                 this->textures_loaded.push_back(texture);  // Store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
@@ -967,7 +991,7 @@ string getFileName(string file){
 /**
 *
 */
-GLint TextureFromFile(const char* path, string directory)
+GLint TextureFromFile(const char* path, string directory, GLboolean alpha = false)
 {
      //Generate texture ID and load texture data
     string filename = directory + '/' + string(path);
@@ -1009,12 +1033,12 @@ GLint TextureFromFile(const char* path, string directory)
 //		    std::cout << "Attempting to load image" << std::endl;
             // Assign texture to ID if we failed from SOIL_load_OGL_texture
             glGenTextures(1, &textureID);
-            unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA); //SOIL_LOAD_AUTO
+            unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, alpha ? SOIL_LOAD_RGBA : SOIL_LOAD_RGB); //SOIL_LOAD_AUTO
             glBindTexture(GL_TEXTURE_2D, textureID);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+            glTexImage2D(GL_TEXTURE_2D, 0, alpha ? GL_RGBA : GL_RGB, width, height, 0, alpha ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, image);
             glGenerateMipmap(GL_TEXTURE_2D);
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, alpha ? GL_CLAMP_TO_EDGE : GL_REPEAT );
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, alpha ? GL_CLAMP_TO_EDGE : GL_REPEAT );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             //de allocates resources and unbinds texture

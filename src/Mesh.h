@@ -23,10 +23,9 @@ using namespace std;
 #define NUM_BONES_PER_VERTEX 4
 static const int MAX_BONES = 100;
 
-
 struct Texture {
     GLuint id;
-    string type;
+    GLuint type;
     aiString path;
 
     Texture(){
@@ -175,6 +174,7 @@ public:
     * Render the mesh
     */
     void Draw(Shader *shader){
+        GLuint opaqueNr = 0;
         // Bind appropriate textures
         for(GLuint i = 0; i < this->textures.size(); i++)
         {
@@ -183,10 +183,14 @@ public:
             glUniform1i(this->precomputedTexture.texLocId[i], i);
             // And finally bind the texture
             glBindTexture(GL_TEXTURE_2D, this->textures[i].id);
+
+            if (this->textures[i].type == aiTextureType_OPACITY)
+                opaqueNr++; // Transfer GLuint to stream
         }
 
         // Also set each mesh's shininess property to a default value (if you want you could extend this to another mesh property and possibly change this value)
         glUniform1f(this->precomputedTexture.material_shininess, 16.0f);
+        glUniform1f(this->precomputedTexture.isOpaque, opaqueNr > 0);
 
         // Draw mesh
         glBindVertexArray(this->VAO);
@@ -210,7 +214,8 @@ private:
     struct TextureShaderInfo{
         //char [25] textureName;
         //GLint  texLocId[25];
-        GLint  *texLocId;
+        GLint *texLocId;
+        GLint isOpaque;
         GLint material_shininess;
     };
 
@@ -271,6 +276,7 @@ private:
         // Bind appropriate textures
         GLuint diffuseNr = 1;
         GLuint specularNr = 1;
+        GLuint opaqueNr = 1;
 
         if (this->textures.size() > 0){
 
@@ -286,18 +292,33 @@ private:
                 // Retrieve texture number (the N in diffuse_textureN)
                 stringstream ss;
                 string number;
-                string name = this->textures[i].type;
-                if(name == "texture_diffuse")
+                string name;
+
+                if(this->textures[i].type == aiTextureType_DIFFUSE){
+                    name = "texture_diffuse";
                     ss << diffuseNr++; // Transfer GLuint to stream
-                else if(name == "texture_specular")
+                } else if(this->textures[i].type == aiTextureType_SPECULAR){
+                    name = "texture_specular";
                     ss << specularNr++; // Transfer GLuint to stream
-                number = ss.str();
-                // Now set the sampler to the correct texture unit
-                this->precomputedTexture.texLocId[i] = glGetUniformLocation(shader->Program, (name + number).c_str());
+                } else if (this->textures[i].type == aiTextureType_OPACITY){
+                    name = "texture_opaque";
+                    ss << opaqueNr++; // Transfer GLuint to stream
+                }
+
+//
+//                number = ss.str();
+//                // Now set the sampler to the correct texture unit
+//                this->precomputedTexture.texLocId[i] = glGetUniformLocation(shader->Program, (name + number).c_str());
+                this->precomputedTexture.texLocId[i] = glGetUniformLocation(shader->Program, name.c_str());
+                cout << name << endl;
             }
+
+
+
         }
 
         this->precomputedTexture.material_shininess = glGetUniformLocation(shader->Program, "material_shininess");
+        this->precomputedTexture.isOpaque = glGetUniformLocation(shader->Program, "is_opaque");
     }
 
     /**

@@ -3,7 +3,7 @@
 SceneObjects::SceneObjects()
 {
     this->stencil = false;
-    physicsEngine = new Physics(1);
+    physicsEngine = new Physics(0);
     physicsEngine->getDynamicsWorld()->setGravity(btVector3(0, -9.8f, 0));
 }
 
@@ -163,10 +163,18 @@ btCollisionShape* object3D::createShapeWithVertices(Model *ourModel){
         btVector3 aabb_min, aabb_max;
         this->shape->getAabb(t,aabb_min, aabb_max);
         cout << this->tag <<". Bounding box original. x=" << aabb_max.x() << ", y=" << aabb_max.y() << ", z=" << aabb_max.z() << "," << endl;
+
+        scaledDimension.setX(aabb_max.x());
+        scaledDimension.setY(aabb_max.y());
+        scaledDimension.setZ(aabb_max.z());
+
+
         scaling = scaleToMeters(dimension, aabb_max);
         this->shape->setLocalScaling(scaling);
         this->shape->getAabb(t,aabb_min, aabb_max);
         cout << this->tag <<". Bounding box scaled. x=" << aabb_max.x() << ", y=" << aabb_max.y() << ", z=" << aabb_max.z() << "," << endl;
+
+
     }
     return this->shape;
 }
@@ -296,6 +304,7 @@ void SceneObjects::createModelStencil(int i){
                 glStencilMask(0x00); // Disable writing to the stencil buffer
             }
 
+            //By default, should be allways enabled, but left here for custom behaviour
             if (userPointer->stencilDepthTest){
                 glEnable(GL_DEPTH_TEST);
             }
@@ -309,16 +318,40 @@ void SceneObjects::createModelStencil(int i){
 bool SceneObjects::mustProcessStencil(int i, glm::mat4 &model, Shader &shader){
     object3D *userPointer = getObjPointer(i);
     bool ret = false;
+
+    btCollisionObject* obj = getPhysics()->getDynamicsWorld()->getCollisionObjectArray()[i];
+    btRigidBody* body = btRigidBody::upcast(obj);
+    btTransform trans;
+    body->getMotionState()->getWorldTransform(trans);
+
     if (userPointer) {
         //Stencil processing
         if (this->stencil){
             if (userPointer->stencil){
+
+                float diffX = userPointer->scaledDimension.x() * (userPointer->stencilScale - 1.0f) / 2.0f;
+                float diffY = userPointer->scaledDimension.y() * (userPointer->stencilScale - 1.0f) / 2.0f;
+                float diffZ = userPointer->scaledDimension.z() * (userPointer->stencilScale - 1.0f) / 2.0f;
+
+//                cout << "diff: " << diff << endl;
                 //Stencil
                 glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
                 glStencilMask(0x00); // Disable writing to the stencil buffer
-                glDisable(GL_DEPTH_TEST);
+
+                //To draw the shadow by stencil tecnic through objects
+                if (userPointer->stencilThroughWalls)
+                    glDisable(GL_DEPTH_TEST);
+
                 shader.Use();
-                model = glm::scale(model, glm::vec3(userPointer->stencilScale, userPointer->stencilScale, userPointer->stencilScale));
+
+                model = glm::translate(model, glm::vec3(trans.getOrigin().getX() - diffX,
+                                                        trans.getOrigin().getY() - diffY,
+                                                        trans.getOrigin().getZ() - diffZ)) ;
+
+                model = glm::scale(model, glm::vec3(userPointer->stencilScale,
+                                                    userPointer->stencilScale,
+                                                    userPointer->stencilScale));
+
                 glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
                 //Calculamos la inversa de la matriz por temas de iluminacion y rendimiento
                 glm::mat4 transInversMatrix = transpose(inverse(model));
