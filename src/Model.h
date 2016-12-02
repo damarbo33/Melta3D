@@ -452,7 +452,7 @@ private:
 
         aiProcess_ImproveCacheLocality     | // improve the cache locality of the output vertices
         aiProcess_RemoveRedundantMaterials | // remove redundant materials
-//        aiProcess_CalcTangentSpace         | // calculate tangents and bitangents if possible
+        aiProcess_CalcTangentSpace         | // calculate tangents and bitangents if possible
 //        aiProcess_ValidateDataStructure    | // perform a full validation of the loader's output
 //        aiProcess_FindDegenerates          | // remove degenerated polygons from the import
 //        aiProcess_FindInvalidData          | // detect invalid model data, such as invalid normal vectors
@@ -467,7 +467,7 @@ private:
         aiProcess_OptimizeMeshes           | // join small meshes, if possible;
         aiProcess_SplitLargeMeshes         | // split large, unrenderable meshes into submeshes
         aiProcess_SortByPType              | // make 'clean' meshes which consist of a single typ of primitives
-        aiProcess_OptimizeGraph            | // CAUTION!!!: A postprocessing step to optimize the scene hierarchy.
+        //aiProcess_OptimizeGraph            | // CAUTION!!!: A postprocessing step to optimize the scene hierarchy.
                                              // Nodes without animations, bones, lights or cameras assigned are
                                              // collapsed and joined.
         0;
@@ -522,21 +522,36 @@ private:
         // Walk through each of the mesh's vertices
         for(GLuint i = 0; i < mesh->mNumVertices; i++){
             Vertex vertex;
-            glm::vec3 vector; // We declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
+            glm::vec3 vectorV; // We declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
             // Positions
-            vector.x = mesh->mVertices[i].x;
-            vector.y = mesh->mVertices[i].y;
-            vector.z = mesh->mVertices[i].z;
-            vertex.Position = vector;
+            vectorV.x = mesh->mVertices[i].x;
+            vectorV.y = mesh->mVertices[i].y;
+            vectorV.z = mesh->mVertices[i].z;
+            vertex.Position = vectorV;
             // Normals
             if (mesh->HasNormals()){
-                vector.x = mesh->mNormals[i].x;
-                vector.y = mesh->mNormals[i].y;
-                vector.z = mesh->mNormals[i].z;
-                vertex.Normal = vector;
-            } else {
-                cout << "WARNING::ASSIMP:: " << "There are no Normals in model" << endl;
+                glm::vec3 vectorN;
+                vectorN.x = mesh->mNormals[i].x;
+                vectorN.y = mesh->mNormals[i].y;
+                vectorN.z = mesh->mNormals[i].z;
+                vertex.Normal = vectorN;
+            }
+            //else {
+                //cout << "WARNING::ASSIMP:: " << "There are no Normals in model" << endl;
                 //return nullptr;
+            //}
+
+            if (mesh->HasTangentsAndBitangents()){
+                glm::vec3 vectorT, vectorBT;
+                vectorT.x = mesh->mTangents[i].x;
+                vectorT.y = mesh->mTangents[i].y;
+                vectorT.z = mesh->mTangents[i].z;
+                vertex.Tangent = vectorT;
+
+                vectorBT.x = mesh->mTangents[i].x;
+                vectorBT.y = mesh->mTangents[i].y;
+                vectorBT.z = mesh->mTangents[i].z;
+                vertex.Bittangent = vectorBT;
             }
 
             // Texture Coordinates
@@ -573,6 +588,7 @@ private:
             // Specular: texture_specularN
             // Normal: texture_normalN
 
+            testTextures(material);
             // 1. Diffuse maps
             vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE);
             textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
@@ -582,13 +598,17 @@ private:
             // 3. Opacity maps
             vector<Texture> opacityMaps = this->loadMaterialTextures(material, aiTextureType_OPACITY);
             textures.insert(textures.end(), opacityMaps.begin(), opacityMaps.end());
+            // 4. normalMaps
+            vector<Texture> normalMaps = this->loadMaterialTextures(material, aiTextureType_HEIGHT);
+            textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+
             //cout << "opacityMaps size: " << opacityMaps.size() << endl;
         }
 
         vector<VertexBoneData> Bones;
         processBones(idMesh, scene, Bones);
         // Return a mesh object created from the extracted mesh data
-        return new Mesh(&vertices, &indices, &textures, &Bones, shader);
+        return new Mesh(&vertices, &indices, &textures, &Bones, shader);;
     }
 
     /**
@@ -629,6 +649,24 @@ private:
             }
         }
     }
+
+    void testTextures(aiMaterial* mat){
+        if (mat->GetTextureCount(aiTextureType_NONE) > 0) cout << "aiTextureType_NONE" << ", ";
+        if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) cout << "aiTextureType_DIFFUSE" << ", ";
+        if (mat->GetTextureCount(aiTextureType_SPECULAR) > 0) cout << "aiTextureType_SPECULAR" << ", ";
+        if (mat->GetTextureCount(aiTextureType_AMBIENT) > 0) cout << "aiTextureType_AMBIENT" << ", ";
+        if (mat->GetTextureCount(aiTextureType_EMISSIVE) > 0) cout << "aiTextureType_EMISSIVE" << ", ";
+        if (mat->GetTextureCount(aiTextureType_HEIGHT) > 0) cout << "aiTextureType_HEIGHT" << ", ";
+        if (mat->GetTextureCount(aiTextureType_NORMALS) > 0) cout << "aiTextureType_NORMALS" << ", ";
+        if (mat->GetTextureCount(aiTextureType_SHININESS) > 0) cout << "aiTextureType_SHININESS" << ", ";
+        if (mat->GetTextureCount(aiTextureType_OPACITY) > 0) cout << "aiTextureType_OPACITY" << ", ";
+        if (mat->GetTextureCount(aiTextureType_DISPLACEMENT) > 0) cout << "aiTextureType_DISPLACEMENT" << ", ";
+        if (mat->GetTextureCount(aiTextureType_LIGHTMAP) > 0) cout << "aiTextureType_LIGHTMAP" << ", ";
+        if (mat->GetTextureCount(aiTextureType_REFLECTION) > 0) cout << "aiTextureType_REFLECTION" << ", ";
+        if (mat->GetTextureCount(aiTextureType_UNKNOWN) > 0) cout << "aiTextureType_UNKNOWN" << ", ";
+        cout << endl;
+    }
+
 
     /**
     * Checks all material textures of a given type and loads the textures if they're not loaded yet.
@@ -673,7 +711,7 @@ private:
 //            cout << " opacity: " << opacity;
 //            cout << " blend: " << blend;
 //            cout << " trans: " << colorTrans.r << "," << colorTrans.g << "," << colorTrans.b << endl;
-//            cout << endl;
+
 
             // Check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
             GLboolean skip = false;
@@ -693,7 +731,10 @@ private:
                 texture.path = str;
                 textures.push_back(texture);
                 this->textures_loaded.push_back(texture);  // Store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
+//                cout << " LOADED!!";
             }
+
+//            cout << endl;
         }
         return textures;
     }

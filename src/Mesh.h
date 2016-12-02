@@ -113,8 +113,13 @@ struct VertexBoneData
 #define TEX_COORD_LOCATION   2
 #define BONE_ID_LOCATION     3
 #define BONE_WEIGHT_LOCATION 4
+#define TANGENT_LOCATION     5
+#define BITTANGENT_LOCATION  6
 
 class Mesh {
+private:
+    string name;
+
 public:
     /*  Mesh Data  */
     vector<Vertex> vertices;
@@ -135,6 +140,13 @@ public:
         return &indices;
     }
 
+    void setName(string var){
+        name = var;
+    }
+
+    string getName(){
+        return name;
+    }
 
     /*  Functions  */
     // Constructor
@@ -175,6 +187,8 @@ public:
     */
     void Draw(Shader *shader){
         GLuint opaqueNr = 0;
+        GLuint normalNr = 0;
+
         // Bind appropriate textures
         for(GLuint i = 0; i < this->textures.size(); i++)
         {
@@ -186,11 +200,15 @@ public:
 
             if (this->textures[i].type == aiTextureType_OPACITY)
                 opaqueNr++; // Transfer GLuint to stream
+
+            if (this->textures[i].type == aiTextureType_HEIGHT)
+                normalNr++; // Transfer GLuint to stream
         }
 
         // Also set each mesh's shininess property to a default value (if you want you could extend this to another mesh property and possibly change this value)
         glUniform1f(this->precomputedTexture.material_shininess, 16.0f);
-        glUniform1f(this->precomputedTexture.isOpaque, opaqueNr > 0);
+        glUniform1i(this->precomputedTexture.isOpaque, opaqueNr > 0);
+        glUniform1i(this->precomputedTexture.isTexNormal, normalNr > 0);
 
         // Draw mesh
         glBindVertexArray(this->VAO);
@@ -216,6 +234,7 @@ private:
         //GLint  texLocId[25];
         GLint *texLocId;
         GLint isOpaque;
+        GLint isTexNormal;
         GLint material_shininess;
     };
 
@@ -265,6 +284,12 @@ private:
 
             glBindVertexArray(0);
         }
+        glEnableVertexAttribArray(TANGENT_LOCATION);
+        glVertexAttribPointer(TANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, Tangent));
+        glEnableVertexAttribArray(BITTANGENT_LOCATION);
+        glVertexAttribPointer(BITTANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, Bittangent));
+
+
     }
 
     /**
@@ -274,9 +299,10 @@ private:
 
         //cout << "preprocessMesh" << endl;
         // Bind appropriate textures
-        GLuint diffuseNr = 1;
-        GLuint specularNr = 1;
-        GLuint opaqueNr = 1;
+        GLuint diffuseNr = 0;
+        GLuint specularNr = 0;
+        GLuint opaqueNr = 0;
+        GLuint normalNr = 0;
 
         if (this->textures.size() > 0){
 
@@ -290,35 +316,47 @@ private:
             {
                 glActiveTexture(GL_TEXTURE0 + i); // Active proper texture unit before binding
                 // Retrieve texture number (the N in diffuse_textureN)
-                stringstream ss;
-                string number;
+//                stringstream ss;
+//                string number;
                 string name;
-
                 if(this->textures[i].type == aiTextureType_DIFFUSE){
                     name = "texture_diffuse";
-                    ss << diffuseNr++; // Transfer GLuint to stream
+                    diffuseNr++; // Transfer GLuint to stream
+//                    ss << diffuseNr++; // Transfer GLuint to stream
                 } else if(this->textures[i].type == aiTextureType_SPECULAR){
                     name = "texture_specular";
-                    ss << specularNr++; // Transfer GLuint to stream
+                    specularNr++; // Transfer GLuint to stream
+//                    ss << specularNr++; // Transfer GLuint to stream
                 } else if (this->textures[i].type == aiTextureType_OPACITY){
                     name = "texture_opaque";
-                    ss << opaqueNr++; // Transfer GLuint to stream
+                    opaqueNr++; // Transfer GLuint to stream
+//                    ss << opaqueNr++; // Transfer GLuint to stream
+                } else if (this->textures[i].type == aiTextureType_HEIGHT){
+                    name = "texture_normal";
+                    normalNr++; // Transfer GLuint to stream
                 }
 
-//
 //                number = ss.str();
 //                // Now set the sampler to the correct texture unit
 //                this->precomputedTexture.texLocId[i] = glGetUniformLocation(shader->Program, (name + number).c_str());
                 this->precomputedTexture.texLocId[i] = glGetUniformLocation(shader->Program, name.c_str());
-                cout << name << endl;
             }
+            cout << "Mesh " << this->getName() << " with "
+            << " d:" << diffuseNr
+            << " s:" << specularNr
+            << " o:" << opaqueNr
+            << " n:" << normalNr
+            << " textures" << endl;
 
-
+            if (diffuseNr > 1 || specularNr > 1 || opaqueNr > 1 || normalNr > 1){
+                cout << "WARNING: More than 1 texture of any type is yet unimplemented" << endl;
+            }
 
         }
 
         this->precomputedTexture.material_shininess = glGetUniformLocation(shader->Program, "material_shininess");
         this->precomputedTexture.isOpaque = glGetUniformLocation(shader->Program, "is_opaque");
+        this->precomputedTexture.isTexNormal = glGetUniformLocation(shader->Program, "is_tex_normal");
     }
 
     /**

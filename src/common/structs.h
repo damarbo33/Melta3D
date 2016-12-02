@@ -11,6 +11,10 @@ struct Vertex {
     glm::vec3 Normal;
     // TexCoords
     glm::vec2 TexCoords;
+    // Tangents
+    glm::vec3 Tangent;
+    // Bittangents
+    glm::vec3 Bittangent;
 
     Vertex(){};
     ~Vertex(){};

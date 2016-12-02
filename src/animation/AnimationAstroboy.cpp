@@ -174,7 +174,7 @@ int main(int argc, char *argv[]){
     object3D *obj2 = new object3D();
     obj2->spinningFriction = 10.0f;
     obj2->dimension = btVector3(0.0, 0.0, 1.8); // El modelo viene tumbado
-    obj2->position = btVector3(5,0,5);
+    obj2->position = btVector3(-1.0, 5.0, -1.5);
     obj2->rotation = glm::angleAxis(glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f)); //Rotacion 90 grados en eje x
     obj2->rotation = obj2->rotation * glm::angleAxis(glm::radians(0.f), glm::vec3(0.f, 0.f, 1.f)); //Rotacion 90 grados en eje z
     obj2->meshModel = ourModel2;
